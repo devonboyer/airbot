@@ -1,0 +1,8 @@
+hash: d8620f1fe58ef57d6f48eb3d20a22e5b04dbc91914f1a18945224166dfe7f2ef
+updated: 2017-10-11T22:01:30.101812154-04:00
+imports:
+- name: github.com/fabioberger/airtable-go
+  version: 3f8d9b3252f119b0012bc15a044dd92e3eafaa56
+- name: github.com/sirupsen/logrus
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+testImports: []
