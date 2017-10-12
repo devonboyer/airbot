@@ -4,3 +4,4 @@ import:
   version: ^1.0.3
 - package: github.com/fabioberger/airtable-go
   version: ^3.1.0
+- package: github.com/abhinavdahiya/go-messenger-bot

@@ -1,8 +1,20 @@
-hash: d8620f1fe58ef57d6f48eb3d20a22e5b04dbc91914f1a18945224166dfe7f2ef
-updated: 2017-10-11T22:01:30.101812154-04:00
+hash: 3aa6d7a58ee3c12955ab3be372fc8f47fe328f6ec922c23c9c7d81481809178a
+updated: 2017-10-11T22:21:56.6577309-04:00
 imports:
+- name: github.com/abhinavdahiya/go-messenger-bot
+  version: 9044eb25e9a32a2c169c9af490cb6179f14a9289
 - name: github.com/fabioberger/airtable-go
   version: 3f8d9b3252f119b0012bc15a044dd92e3eafaa56
+  subpackages:
+  - utils
 - name: github.com/sirupsen/logrus
   version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+- name: golang.org/x/crypto
+  version: c367d6eeb7c6158125f2f47e049f7eb7e251c09a
+  subpackages:
+  - ssh/terminal
+- name: golang.org/x/sys
+  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
+  subpackages:
+  - unix
 testImports: []
