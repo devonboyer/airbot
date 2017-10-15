@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+PROJECT_DIR="$HOME/src/github.com/devonboyer/airbot"
+GCLOUD_ACCOUNT="hello@devonboyer.com"
+PROJECT_ID="rising-artifact-182801" # Playground
+KEYRING_NAME="airbot"
+
+if [ $(gcloud config get-value account) != $GCLOUD_ACCOUNT ]; then
+  echo "Wrong gcloud account"
+  exit 1
+fi
+
+encrypt() {
+  PLAINTEXT=$(cat $PROJECT_DIR/config/$1.json| base64)
+
+  curl -s -X POST "https://cloudkms.googleapis.com/v1/projects/$PROJECT_ID/locations/global/keyRings/$KEYRING_NAME/cryptoKeys/$1:encrypt" \
+    -d "{\"plaintext\":\"$PLAINTEXT\"}" \
+    -H "Authorization:Bearer $(gcloud auth application-default print-access-token)" \
+    -H "Content-Type:application/json" \
+    | jq .ciphertext -r > "$PROJECT_DIR/config/$1.encrypted"
+}
+
+decrypt() {
+  CIPHERTEXT=$(cat $PROJECT_DIR/config/$1.encrypted)
+
+  curl -s -X POST "https://cloudkms.googleapis.com/v1/projects/$PROJECT_ID/locations/global/keyRings/$KEYRING_NAME/cryptoKeys/$1:decrypt" \
+    -d "{\"ciphertext\":\"$CIPHERTEXT\"}" \
+    -H "Authorization:Bearer $(gcloud auth application-default print-access-token)" \
+    -H "Content-Type:application/json" \
+    | jq .plaintext -r | base64 -D > "$PROJECT_DIR/config/$1.json"
+}
+
+subcommand=$1
+case $subcommand in
+    *)
+        shift
+        ${subcommand} $@
+        if [ $? = 127 ]; then
+            echo "Error: '$subcommand' is not a known subcommand." >&2
+            exit 1
+        fi
+        ;;
+esac

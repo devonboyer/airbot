@@ -16,3 +16,6 @@
 .DS_Store
 
 bin/
+
+config/secrets.json
+config/service-account.json

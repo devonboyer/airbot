@@ -2,6 +2,8 @@ package airbot
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -12,6 +14,10 @@ const (
 	keyRingID   = "airbot"
 	cryptoKeyID = "secrets"
 )
+
+func init() {
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(configDir, "service-account.json"))
+}
 
 func TestDecryptSecrets(t *testing.T) {
 	ciphertext, err := GetCiphertext(configDir)
