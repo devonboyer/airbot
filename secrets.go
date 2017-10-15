@@ -1,11 +1,12 @@
 package airbot
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 
 	"golang.org/x/oauth2/google"
@@ -24,17 +25,11 @@ type Secrets struct {
 }
 
 func GetCiphertext(dir string) ([]byte, error) {
-	file, err := os.Open(filepath.Join(dir, "secrets.encrypted"))
+	ciphertext, err := ioutil.ReadFile(filepath.Join(dir, "secrets.encrypted"))
 	if err != nil {
 		return nil, err
 	}
-
-	var ciphertext []byte
-	err = json.NewDecoder(file).Decode(&ciphertext)
-	if err != nil {
-		return nil, err
-	}
-	return ciphertext, nil
+	return bytes.TrimSpace(ciphertext), nil
 }
 
 func DecryptSecrets(ctx context.Context, projectID, locationID, keyRingID, cryptoKeyID string, ciphertext []byte) (*Secrets, error) {

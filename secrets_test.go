@@ -22,7 +22,7 @@ func init() {
 func TestDecryptSecrets(t *testing.T) {
 	ciphertext, err := GetCiphertext(configDir)
 	if err != nil {
-		t.Error("Error occurred")
+		t.Error("Error occurred", err)
 	}
 	if len(ciphertext) == 0 {
 		t.Error("No ciphertext")
