@@ -6,12 +6,11 @@ import (
 	"os"
 
 	"github.com/devonboyer/airbot"
-
 	"github.com/sirupsen/logrus"
 	"google.golang.org/appengine"
 )
 
-var configDir, projectID, locationID, keyRingID, cryptoKeyID string
+var configDir, projectID, locationID, keyRingID, cryptoKeyID, storageBucketName string
 
 func init() {
 	configDir = "config"
@@ -19,10 +18,11 @@ func init() {
 	locationID = os.Getenv("KMS_LOCATION_ID")
 	keyRingID = os.Getenv("KMS_KEYRING_ID")
 	cryptoKeyID = os.Getenv("KMS_CRYPTOKEY_ID")
+	storageBucketName = os.Getenv("STORAGE_BUCKET_NAME")
 }
 
 func main() {
-	logrus.Info("starting airbot")
+	logrus.Info("Starting airbot")
 
 	// Get ciphertext
 	ciphertext, err := airbot.GetCiphertext(configDir)
@@ -36,6 +36,7 @@ func main() {
 	if err != nil {
 		logrus.WithError(err).Panic("Could not decrypt secrets")
 	}
+	logrus.Info("Decrypted secrets")
 
 	// Setup webhook
 	http.HandleFunc("/webhook", func(w http.ResponseWriter, req *http.Request) {
@@ -48,6 +49,8 @@ func main() {
 			w.WriteHeader(http.StatusUnauthorized)
 		}
 	})
+
+	logrus.Info("Starting appengine server")
 
 	appengine.Main()
 }

@@ -21,8 +21,9 @@ run: build
 	KMS_LOCATION_ID=global \
 	KMS_KEYRING_ID=airbot \
 	KMS_CRYPTOKEY_ID=secrets \
+	STORAGE_BUCKET_NAME=storage-rising-artifact-182801 \
 	GOOGLE_APPLICATION_CREDENTIALS=config/service-account.json \
-	bin/airbot
+	go run ${LDFLAGS} app/main.go
 
 deploy:
 	scripts/deploy
