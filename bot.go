@@ -1,3 +1,4 @@
 package airbot
 
-type Bot interface{}
+type Bot interface {
+}

@@ -18,7 +18,9 @@ clean:
 run: build
 	ENV=development \
 	PROJECT_ID=rising-artifact-182801 \
-	BASE_ID=Shows \
+	KMS_LOCATION_ID=global \
+	KMS_KEYRING_ID=airbot \
+	KMS_CRYPTOKEY_ID=secrets \
 	bin/airbot
 
 deploy:

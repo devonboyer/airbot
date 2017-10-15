@@ -1,25 +1,45 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"context"
+	"os"
+
+	"github.com/devonboyer/airbot"
+	"github.com/devonboyer/airbot/mbotapi"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/appengine"
 )
 
+var configDir, projectID, locationID, keyRingID, cryptoKeyID string
+
+func init() {
+	configDir = "config"
+	projectID = os.Getenv("PROJECT_ID")
+	locationID = os.Getenv("KMS_LOCATION_ID")
+	keyRingID = os.Getenv("KMS_KEYRING_ID")
+	cryptoKeyID = os.Getenv("KMS_CRYPTOKEY_ID")
+}
+
 func main() {
 	logrus.Info("starting airbot")
 
-	http.HandleFunc("/", handle)
+	// Get ciphertext
+	ciphertext, err := airbot.GetCiphertext(configDir)
+	if err != nil {
+		logrus.WithError(err).Panic("Could not read ciphertext")
+	}
+
+	// Decrypt secrets
+	ctx := context.Background()
+	secrets, err := airbot.DecryptSecrets(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
+	if err != nil {
+		logrus.WithError(err).Panic("Could not decrypt secrets")
+	}
+
+	// Setup webhook
+	client := mbotapi.New(secrets.Messenger.VerifyToken)
+	client.SetWebhook("/webhook")
 
 	appengine.Main()
-}
-
-func handle(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	fmt.Fprint(w, "Hello world!")
 }
