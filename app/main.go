@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"os"
 
 	"github.com/devonboyer/airbot"
-	"github.com/devonboyer/airbot/mbotapi"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/appengine"
@@ -38,8 +38,16 @@ func main() {
 	}
 
 	// Setup webhook
-	client := mbotapi.New(secrets.Messenger.VerifyToken)
-	client.SetWebhook("/webhook")
+	http.HandleFunc("/webhook", func(w http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case "GET":
+			if req.FormValue("hub.verify_token") == secrets.Messenger.VerifyToken {
+				w.Write([]byte(req.FormValue("hub.challenge")))
+				return
+			}
+			w.WriteHeader(http.StatusUnauthorized)
+		}
+	})
 
 	appengine.Main()
 }

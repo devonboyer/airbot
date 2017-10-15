@@ -21,6 +21,7 @@ run: build
 	KMS_LOCATION_ID=global \
 	KMS_KEYRING_ID=airbot \
 	KMS_CRYPTOKEY_ID=secrets \
+	GOOGLE_APPLICATION_CREDENTIALS=config/service-account.json \
 	bin/airbot
 
 deploy:
