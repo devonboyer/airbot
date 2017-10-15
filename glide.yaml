@@ -1,7 +1,0 @@
-package: github.com/devonboyer/airbot
-import:
-- package: github.com/sirupsen/logrus
-  version: ^1.0.3
-- package: github.com/fabioberger/airtable-go
-  version: ^3.1.0
-- package: github.com/abhinavdahiya/go-messenger-bot

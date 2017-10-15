@@ -16,11 +16,9 @@ clean:
 	rm -rf bin
 
 run: build 
-	AIRTABLE_API_KEY="foo" \
-	AIRTABLE_BASE_ID="foo" \
-	MESSENGER_ACCESS_TOKEN="foo" \
-	MESSENGER_VERIFY_TOKEN="foo" \
-	MESSENGER_APP_SECRET="foo" \
 	bin/airbot
+
+deploy:
+	scripts/deploy
 
 .PHONY: all build bin clean run
