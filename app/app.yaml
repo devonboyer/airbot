@@ -1,2 +1,7 @@
 runtime: go
 env: flex
+env_variables:
+  ENV: production
+  PROJECT_ID: rising-artifact-182801
+  BASE_ID: Shows
+  

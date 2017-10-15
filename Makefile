@@ -15,7 +15,10 @@ build: bin
 clean:
 	rm -rf bin
 
-run: build 
+run: build
+	ENV=development \
+	PROJECT_ID=rising-artifact-182801 \
+	BASE_ID=Shows \
 	bin/airbot
 
 deploy:
