@@ -3,6 +3,6 @@
 APP_DIR="$HOME/src/github.com/devonboyer/airbot/app"
 GCLOUD_ACCOUNT="hello@devonboyer.com"
 PROJECT_ID="rising-artifact-182801" # Playground
-COMMIT=$(git rev-parse HEAD)
+VERSION=$(git rev-parse --short HEAD)
 
-cd $APP_DIR && gcloud app deploy --account=$GCLOUD_ACCOUNT --project=$PROJECT_ID --version=$COMMIT
+cd ${APP_DIR} && gcloud app deploy --account=${GCLOUD_ACCOUNT} --project=${PROJECT_ID} --version=${VERSION}
