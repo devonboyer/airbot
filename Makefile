@@ -1,8 +1,7 @@
-COMMIT=$(shell git rev-parse HEAD)
-BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+VERSION=$(shell git rev-parse --short HEAD)
 
 # Setup the -ldflags option for go build here, interpolate the variable values
-LDFLAGS = -ldflags "-X main.COMMIT=${COMMIT} -X main.BRANCH=${BRANCH}"
+LDFLAGS = -ldflags "-X main.version=${VERSION}"
 
 all: build
 
@@ -23,9 +22,12 @@ run: build
 	KMS_CRYPTOKEY_ID=secrets \
 	STORAGE_BUCKET_NAME=storage-rising-artifact-182801 \
 	GOOGLE_APPLICATION_CREDENTIALS=config/service-account.json \
-	go run ${LDFLAGS} app/main.go
+	go run ${LDFLAGS} app/main.go -v
+
+test:
+	go test ./...
 
 deploy:
 	scripts/deploy
 
-.PHONY: all build bin clean run
+.PHONY: all build bin clean run test

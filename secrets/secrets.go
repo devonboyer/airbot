@@ -1,13 +1,10 @@
-package airbot
+package secrets
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 
 	"golang.org/x/oauth2/google"
 	cloudkms "google.golang.org/api/cloudkms/v1"
@@ -24,15 +21,7 @@ type Secrets struct {
 	} `json:"messenger"`
 }
 
-func GetCiphertext(dir string) ([]byte, error) {
-	ciphertext, err := ioutil.ReadFile(filepath.Join(dir, "secrets.encrypted"))
-	if err != nil {
-		return nil, err
-	}
-	return bytes.TrimSpace(ciphertext), nil
-}
-
-func DecryptSecrets(ctx context.Context, projectID, locationID, keyRingID, cryptoKeyID string, ciphertext []byte) (*Secrets, error) {
+func Decrypt(ctx context.Context, projectID, locationID, keyRingID, cryptoKeyID string, ciphertext []byte) (*Secrets, error) {
 	client, err := google.DefaultClient(ctx, cloudkms.CloudPlatformScope)
 	if err != nil {
 		return nil, err
