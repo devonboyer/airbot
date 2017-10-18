@@ -8,21 +8,21 @@ import (
 	"cloud.google.com/go/storage"
 )
 
-type Storage struct {
+type StorageClient struct {
 	client *storage.Client
 }
 
-func NewStorage(ctx context.Context) (*Storage, error) {
+func NewStorageClient(ctx context.Context) (*StorageClient, error) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &Storage{
+	return &StorageClient{
 		client: client,
 	}, nil
 }
 
-func (s *Storage) Get(ctx context.Context, bucket, object string) ([]byte, error) {
+func (s *StorageClient) Get(ctx context.Context, bucket, object string) ([]byte, error) {
 	reader, err := s.client.Bucket(bucket).Object(object).NewReader(ctx)
 	if err != nil {
 		return nil, err
@@ -35,6 +35,6 @@ func (s *Storage) Get(ctx context.Context, bucket, object string) ([]byte, error
 	return bytes.TrimSpace(buf.Bytes()), nil
 }
 
-func (s *Storage) Close() error {
+func (s *StorageClient) Close() error {
 	return s.client.Close()
 }

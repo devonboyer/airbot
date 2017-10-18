@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -19,17 +21,11 @@ func init() {
 func TestStorage(t *testing.T) {
 	// Get a file from cloud storage.
 	ctx := context.Background()
-	storage, err := NewStorage(ctx)
-	if err != nil {
-		t.Error("Error occurred", err)
-	}
+	storage, err := NewStorageClient(ctx)
+	require.NoError(t, err)
 	defer storage.Close()
 
 	data, err := storage.Get(ctx, storageBucketName, "secrets.encrypted")
-	if err != nil {
-		t.Error("Error occurred", err)
-	}
-	if len(data) == 0 {
-		t.Error("No data")
-	}
+	require.NoError(t, err)
+	require.NotZero(t, len(data))
 }

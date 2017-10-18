@@ -36,7 +36,7 @@ func main() {
 
 	// Get storage client.
 	ctx := context.Background()
-	storage, err := airbot.NewStorage(ctx)
+	storage, err := airbot.NewStorageClient(ctx)
 	if err != nil {
 		logger.WithError(err).Panic("Could not create storage client")
 	}

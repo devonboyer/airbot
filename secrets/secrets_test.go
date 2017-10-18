@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -22,22 +24,16 @@ func init() {
 }
 
 func TestDecrypt(t *testing.T) {
-	ciphertext, err := getCiphertext(configDir)
-	if err != nil {
-		t.Error("Error occurred", err)
-	}
+	ciphertext := getCiphertext(t, configDir)
 
 	ctx := context.Background()
-	_, err = Decrypt(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
-	if err != nil {
-		t.Error("Error occurred", err)
-	}
+	_, err := Decrypt(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
+	require.NoError(t, err)
 }
 
-func getCiphertext(dir string) ([]byte, error) {
-	ciphertext, err := ioutil.ReadFile(filepath.Join(dir, "secrets.encrypted"))
-	if err != nil {
-		return nil, err
-	}
-	return bytes.TrimSpace(ciphertext), nil
+func getCiphertext(t *testing.T, dir string) []byte {
+	data, err := ioutil.ReadFile(filepath.Join(dir, "secrets.encrypted"))
+	require.NoError(t, err)
+	require.NotZero(t, len(data))
+	return bytes.TrimSpace(data)
 }
