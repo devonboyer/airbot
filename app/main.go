@@ -60,16 +60,18 @@ func main() {
 	}
 	logger.Info("Decrypted secrets")
 
-	// Get Airtable client
-	client := airtable.New(secrets.Airtable.APIKey)
-
-	// Setup routes
-	r := mux.NewRouter()
-	r.HandleFunc("/shows/today", shows.TodayHandler(ctx, client))
-	r.HandleFunc("/webhook", messenger.WebhookHandler(secrets.Messenger.VerifyToken))
-	http.Handle("/", r)
+	setupRoutes(secrets)
 
 	logrus.Info("Starting appengine server")
 
 	appengine.Main()
+}
+
+func setupRoutes(secrets *secrets.Secrets) {
+	client := airtable.New(secrets.Airtable.APIKey)
+
+	r := mux.NewRouter()
+	r.HandleFunc("/shows/today", shows.TodayHandler(client))
+	r.HandleFunc("/webhook", messenger.WebhookHandler(secrets.Messenger.VerifyToken))
+	http.Handle("/", r)
 }
