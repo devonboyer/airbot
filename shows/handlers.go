@@ -16,7 +16,7 @@ func init() {
 	tableID = "Shows"
 }
 
-func TodayHandler(ctx context.Context, client airtable.Client) http.HandlerFunc {
+func TodayHandler(ctx context.Context, client *airtable.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		day := time.Now().Weekday()
 		// Get shows
