@@ -1,4 +1,4 @@
-package airbot
+package shows
 
 import "time"
 
