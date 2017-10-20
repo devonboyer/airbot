@@ -30,17 +30,17 @@ func (r *RequestHandle) NotifType(notifType NotifType) *RequestHandle {
 }
 
 type TextRequestHandle struct {
-	*RequestHandle
-	text string
+	request *RequestHandle
+	text    string
 }
 
 func (r *RequestHandle) Text(text string) *TextRequestHandle {
 	return &TextRequestHandle{
-		RequestHandle: r,
-		text:          text,
+		request: r,
+		text:    text,
 	}
 }
 
-func (r *RequestHandle) Do(ctx context.Context) error {
+func (r *TextRequestHandle) Do(ctx context.Context) error {
 	return nil
 }

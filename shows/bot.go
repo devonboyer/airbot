@@ -42,6 +42,7 @@ func (b *Bot) TodayHandler() http.HandlerFunc {
 
 		// Process shows.
 		_ = b.processList(shows)
+
 	}
 }
 
