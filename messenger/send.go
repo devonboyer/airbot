@@ -1,28 +1,40 @@
 package messenger
 
-type MessageHandle struct {
-	client    *Client
-	recipient string
-	text      string
+type NotifType string
+
+const (
+	RegularNotif = NotifType("REGULAR")
+	SilentNotif  = NotifType("SILENT_PUSH")
+	NoNotif      = NotifType("NO_PUSH")
+)
+
+type RequestHandle struct {
+	client      *Client
+	recipientID string
+	notifType   NotifType
 }
 
-func (c *Client) Message() *MessageHandle {
-	return &MessageHandle{
-		client: c,
+func (c *Client) Request(recipientID string) *RequestHandle {
+	return &RequestHandle{
+		client:      c,
+		recipientID: recipientID,
+		notifType:   RegularNotif,
 	}
 }
 
-func (c *Client) Template() *MessageHandle {}
-
-// attachment and payload diff for each template
-
-// Message,Button,Receipt..all different payloads sort of
-
-type MessageCall struct {
-	// fields
+func (r *RequestHandle) NotifType(notifType NotifType) *RequestHandle {
+	r.notifType = notifType
+	return r
 }
 
-// recipient, message
+type TextRequestHandle struct {
+	*RequestHandle
+	text string
+}
 
-// Many different kinds of templates
-//
+func (r *RequestHandle) Text(text string) *TextRequestHandle {
+	return &TextRequestHandle{
+		RequestHandle: r,
+		text:          text,
+	}
+}
