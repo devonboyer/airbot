@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/devonboyer/airbot"
-	"github.com/devonboyer/airbot/airtable"
 	"github.com/devonboyer/airbot/messenger"
 	"github.com/devonboyer/airbot/secrets"
 	"github.com/devonboyer/airbot/shows"
@@ -68,10 +67,11 @@ func main() {
 }
 
 func setupRoutes(secrets *secrets.Secrets) {
-	client := airtable.New(secrets.Airtable.APIKey)
+	bot := shows.New(secrets.Airtable.APIKey)
+	mClient := messenger.New(secrets.Messenger.AccessToken, secrets.Messenger.VerifyToken, secrets.Messenger.AppSecret)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/shows/today", shows.TodayHandler(client))
-	r.HandleFunc("/webhook", messenger.WebhookHandler(secrets.Messenger.VerifyToken))
+	r.HandleFunc("/shows/today", bot.TodayHandler())
+	r.HandleFunc("/webhook", mClient.WebhookHandler())
 	http.Handle("/", r)
 }

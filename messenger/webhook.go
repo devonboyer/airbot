@@ -2,11 +2,11 @@ package messenger
 
 import "net/http"
 
-func WebhookHandler(verifyToken string) http.HandlerFunc {
+func (c *Client) WebhookHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "GET":
-			if req.FormValue("hub.verify_token") == verifyToken {
+			if req.FormValue("hub.verify_token") == c.verifyToken {
 				w.Write([]byte(req.FormValue("hub.challenge")))
 				return
 			}
