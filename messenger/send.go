@@ -1,5 +1,7 @@
 package messenger
 
+import "context"
+
 type NotifType string
 
 const (
@@ -14,7 +16,7 @@ type RequestHandle struct {
 	notifType   NotifType
 }
 
-func (c *Client) Request(recipientID string) *RequestHandle {
+func (c *Client) Send(recipientID string) *RequestHandle {
 	return &RequestHandle{
 		client:      c,
 		recipientID: recipientID,
@@ -37,4 +39,8 @@ func (r *RequestHandle) Text(text string) *TextRequestHandle {
 		RequestHandle: r,
 		text:          text,
 	}
+}
+
+func (r *RequestHandle) Do(ctx context.Context) error {
+	return nil
 }
