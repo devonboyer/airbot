@@ -1,4 +1,4 @@
-package airtable
+package messenger
 
 import (
 	"encoding/json"
@@ -7,38 +7,44 @@ import (
 	"net/http"
 )
 
-const majorAPIVersion = "0"
+const apiVersion = "2.6"
 
 type Client struct {
-	apiKey   string
-	basePath string
-	hc       *http.Client
+	accessToken string
+	verifyToken string
+	appSecret   string
+	basePath    string
+	hc          *http.Client
 }
 
-func New(apiKey string) *Client {
+func New(accessToken, verifyToken, appSecret string) *Client {
 	return &Client{
-		apiKey:   apiKey,
-		basePath: fmt.Sprintf("https://api.airtable.com/v%s", majorAPIVersion),
-		hc:       http.DefaultClient,
+		accessToken: accessToken,
+		verifyToken: verifyToken,
+		appSecret:   appSecret,
+		basePath:    fmt.Sprintf("https://graph.facebook.com/v%s/me", apiVersion),
+		hc:          http.DefaultClient,
 	}
 }
 
-var xVersionHeader = fmt.Sprintf("%s.1.0", majorAPIVersion)
-
-func setVersionHeader(headers http.Header) {
-	headers.Set("x-api-version", xVersionHeader)
+func setContentType(headers http.Header, value string) {
+	headers.Set("Content-Type", value)
 }
 
+// https://developers.facebook.com/docs/messenger-platform/reference/send-api/error-codes
 type Error struct {
-	StatusCode int
-	Type       string `json:"type"`
 	Message    string `json:"message"`
+	Type       string `json:"type"`
+	Code       int    `json:"code"`
+	ErrorData  string `json:"error_data"`
+	FBstraceID string `json:"fbstrace_id"`
+	StatusCode int
 	Body       string
 }
 
 func (e *Error) Error() string {
 	if e.Message != "" {
-		return fmt.Sprintf("%s (%d): %s", e.Type, e.StatusCode, e.Message)
+		return fmt.Sprintf("%s (%d): %s", e.Type, e.Code, e.Message)
 	}
 	return fmt.Sprintf("Unknown (%d): %s", e.StatusCode, e.Body)
 }

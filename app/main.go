@@ -6,7 +6,10 @@ import (
 	"os"
 
 	"github.com/devonboyer/airbot"
+	"github.com/devonboyer/airbot/messenger"
 	"github.com/devonboyer/airbot/secrets"
+	"github.com/devonboyer/airbot/shows"
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/appengine"
 )
@@ -56,19 +59,19 @@ func main() {
 	}
 	logger.Info("Decrypted secrets")
 
-	// Setup webhook
-	http.HandleFunc("/webhook", func(w http.ResponseWriter, req *http.Request) {
-		switch req.Method {
-		case "GET":
-			if req.FormValue("hub.verify_token") == secrets.Messenger.VerifyToken {
-				w.Write([]byte(req.FormValue("hub.challenge")))
-				return
-			}
-			w.WriteHeader(http.StatusUnauthorized)
-		}
-	})
+	setupRoutes(secrets)
 
 	logrus.Info("Starting appengine server")
 
 	appengine.Main()
+}
+
+func setupRoutes(secrets *secrets.Secrets) {
+	bot := shows.New(secrets.Airtable.APIKey)
+	mClient := messenger.New(secrets.Messenger.AccessToken, secrets.Messenger.VerifyToken, secrets.Messenger.AppSecret)
+
+	r := mux.NewRouter()
+	r.HandleFunc("/shows/today", bot.TodayHandler())
+	r.HandleFunc("/webhook", mClient.WebhookHandler())
+	http.Handle("/", r)
 }
