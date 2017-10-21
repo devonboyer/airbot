@@ -41,7 +41,7 @@ func (r *RequestHandle) Message(notifType NotifType) *MessageHandle {
 	return &MessageHandle{
 		client:      r.client,
 		recipientID: r.recipientID,
-		notifType:   RegularNotif,
+		notifType:   notifType,
 	}
 }
 
