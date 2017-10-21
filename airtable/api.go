@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+const majorAPIVersion = "0"
+
 type Client struct {
 	apiKey   string
 	basePath string
@@ -19,6 +21,12 @@ func New(apiKey string) *Client {
 		basePath: fmt.Sprintf("https://api.airtable.com/v%s", majorAPIVersion),
 		hc:       http.DefaultClient,
 	}
+}
+
+var xVersionHeader = fmt.Sprintf("%s.1.0", majorAPIVersion)
+
+func setVersionHeader(headers http.Header) {
+	headers.Set("x-api-version", xVersionHeader)
 }
 
 type Error struct {
@@ -37,14 +45,6 @@ func (e *Error) Error() string {
 
 type errorReply struct {
 	Error *Error `json:"error"`
-}
-
-const majorAPIVersion = "0"
-
-var xVersionHeader = fmt.Sprintf("%s.1.0", majorAPIVersion)
-
-func setVersionHeader(headers http.Header) {
-	headers.Set("x-api-version", xVersionHeader)
 }
 
 func checkResponse(res *http.Response) error {

@@ -1,6 +1,15 @@
 package messenger
 
-import "context"
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"path"
+
+	"golang.org/x/net/context/ctxhttp"
+)
 
 type NotifType string
 
@@ -13,34 +22,64 @@ const (
 type RequestHandle struct {
 	client      *Client
 	recipientID string
-	notifType   NotifType
 }
 
 func (c *Client) Send(recipientID string) *RequestHandle {
 	return &RequestHandle{
 		client:      c,
 		recipientID: recipientID,
+	}
+}
+
+type MessageHandle struct {
+	client      *Client
+	recipientID string
+	notifType   NotifType
+}
+
+func (r *RequestHandle) Message(notifType NotifType) *MessageHandle {
+	return &MessageHandle{
+		client:      r.client,
+		recipientID: r.recipientID,
 		notifType:   RegularNotif,
 	}
 }
 
-func (r *RequestHandle) NotifType(notifType NotifType) *RequestHandle {
-	r.notifType = notifType
-	return r
+type MessageRequestCall struct {
+	client *Client
+	req    *MessageRequest
 }
 
-type TextRequestHandle struct {
-	request *RequestHandle
-	text    string
-}
-
-func (r *RequestHandle) Text(text string) *TextRequestHandle {
-	return &TextRequestHandle{
-		request: r,
-		text:    text,
+func (r *MessageHandle) Text(text string) *MessageRequestCall {
+	return &MessageRequestCall{
+		client: r.client,
+		req: &MessageRequest{
+			Recipient: Recipient{ID: r.recipientID},
+			Message:   Message{Text: text},
+			NotifType: string(r.notifType),
+		},
 	}
 }
 
-func (r *TextRequestHandle) Do(ctx context.Context) error {
-	return nil
+func (c *MessageRequestCall) Do(ctx context.Context) error {
+	res, err := c.doRequest(ctx)
+	if err != nil {
+		return err
+	}
+	return checkResponse(res)
+}
+
+func (c *MessageRequestCall) doRequest(ctx context.Context) (*http.Response, error) {
+	buf := &bytes.Buffer{}
+	err := json.NewEncoder(buf).Encode(c.req)
+	if err != nil {
+		return nil, err
+	}
+	url := path.Join(c.client.basePath, "messages") + fmt.Sprintf("?accessToken=%s", c.client.accessToken)
+	req, _ := http.NewRequest("POST", url, buf)
+	setContentType(req.Header, "application/json")
+	if ctx == nil {
+		return c.client.hc.Do(req)
+	}
+	return ctxhttp.Do(ctx, c.client.hc, req)
 }
