@@ -1,4 +1,4 @@
-package secrets
+package airbot
 
 import (
 	"bytes"
@@ -23,11 +23,11 @@ func init() {
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(configDir, "service-account.json"))
 }
 
-func TestDecrypt(t *testing.T) {
+func TestDecryptSecrets(t *testing.T) {
 	ciphertext := getCiphertext(t, configDir)
 
 	ctx := context.Background()
-	_, err := Decrypt(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
+	_, err := DecryptSecrets(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
 	require.NoError(t, err)
 }
 

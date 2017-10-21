@@ -7,7 +7,6 @@ import (
 
 	"github.com/devonboyer/airbot"
 	"github.com/devonboyer/airbot/messenger"
-	"github.com/devonboyer/airbot/secrets"
 	"github.com/devonboyer/airbot/shows"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -53,7 +52,7 @@ func main() {
 	logger.Info("Retrieved ciphertext")
 
 	// Decrypt secrets
-	secrets, err := secrets.Decrypt(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
+	secrets, err := airbot.DecryptSecrets(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
 	if err != nil {
 		logrus.WithError(err).Panic("Could not decrypt secrets")
 	}
@@ -66,7 +65,7 @@ func main() {
 	appengine.Main()
 }
 
-func setupRoutes(secrets *secrets.Secrets) {
+func setupRoutes(secrets *airbot.Secrets) {
 	bot := shows.New(secrets.Airtable.APIKey)
 	mClient := messenger.New(secrets.Messenger.AccessToken, secrets.Messenger.VerifyToken, secrets.Messenger.AppSecret)
 

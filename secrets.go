@@ -1,4 +1,4 @@
-package secrets
+package airbot
 
 import (
 	"context"
@@ -21,7 +21,7 @@ type Secrets struct {
 	} `json:"messenger"`
 }
 
-func Decrypt(ctx context.Context, projectID, locationID, keyRingID, cryptoKeyID string, ciphertext []byte) (*Secrets, error) {
+func DecryptSecrets(ctx context.Context, projectID, locationID, keyRingID, cryptoKeyID string, ciphertext []byte) (*Secrets, error) {
 	client, err := google.DefaultClient(ctx, cloudkms.CloudPlatformScope)
 	if err != nil {
 		return nil, err
