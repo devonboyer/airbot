@@ -10,15 +10,14 @@ type Message struct {
 }
 
 type SendBody struct {
-	Recipient    Recipient `json:"recipient"`
-	Message      Message   `json:"message"`
-	SenderAction string    `json:"sender_action"`
-	NotifType    string    `json:"notification_type"`
+	Recipient Recipient `json:"recipient"`
+	Message   Message   `json:"message"`
+	NotifType string    `json:"notification_type"`
 }
 
 type SenderActionBody struct {
-	Recipient    Recipient `json:"recipient"`
-	SenderAction string    `json:"sender_action"`
+	Recipient Recipient `json:"recipient"`
+	Action    string    `json:"sender_action"`
 }
 
 type ReceiveBody struct {

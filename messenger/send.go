@@ -12,7 +12,7 @@ const (
 	SilentNotif  = NotifType("SILENT_PUSH")
 	NoNotif      = NotifType("NO_PUSH")
 	TypingOn     = SenderAction("typing_on")
-	TypingOff    = SenderAction("typing_on")
+	TypingOff    = SenderAction("typing_off")
 	MarkSeen     = SenderAction("mark_seen")
 )
 
@@ -33,12 +33,12 @@ type SenderActionCall struct {
 	body   *SenderActionBody
 }
 
-func (r *SendHandle) SenderAction(action SenderAction) *SenderActionCall {
+func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
 	return &SenderActionCall{
 		client: r.client,
 		body: &SenderActionBody{
-			Recipient:    r.recipient,
-			SenderAction: string(action),
+			Recipient: r.recipient,
+			Action:    string(action),
 		},
 	}
 }
