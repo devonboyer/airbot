@@ -3,6 +3,7 @@ package messenger
 import "net/http"
 
 func (c *Client) WebhookHandler() http.HandlerFunc {
+
 	return func(w http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "GET":
@@ -12,6 +13,11 @@ func (c *Client) WebhookHandler() http.HandlerFunc {
 				return
 			}
 			w.WriteHeader(http.StatusUnauthorized)
+		case "POST":
+			// Handle events.
+
+			// process this
+			// send to receiver channel
 		}
 	}
 }
