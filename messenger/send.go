@@ -1,6 +1,8 @@
 package messenger
 
-import "context"
+import (
+	"context"
+)
 
 type (
 	NotifType    string
@@ -17,14 +19,14 @@ const (
 )
 
 type SendHandle struct {
-	client    *Client
-	recipient Recipient
+	client      *Client
+	recipientID string
 }
 
 func (c *Client) Send(recipientID string) *SendHandle {
 	return &SendHandle{
-		client:    c,
-		recipient: Recipient{ID: recipientID},
+		client:      c,
+		recipientID: recipientID,
 	}
 }
 
@@ -37,7 +39,7 @@ func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
 	return &SenderActionCall{
 		client: r.client,
 		body: &SenderActionBody{
-			Recipient: r.recipient,
+			Recipient: Recipient{ID: r.recipientID},
 			Action:    string(action),
 		},
 	}
@@ -52,29 +54,29 @@ func (c *SenderActionCall) Do(ctx context.Context) error {
 }
 
 type MessageHandle struct {
-	client    *Client
-	recipient Recipient
-	notifType NotifType
+	client      *Client
+	recipientID string
+	notifType   NotifType
 }
 
 func (r *SendHandle) Message(notifType NotifType) *MessageHandle {
 	return &MessageHandle{
-		client:    r.client,
-		recipient: r.recipient,
-		notifType: notifType,
+		client:      r.client,
+		recipientID: r.recipientID,
+		notifType:   notifType,
 	}
 }
 
 type SendMessageCall struct {
 	client *Client
-	body   *SendBody
+	body   *SendMessageBody
 }
 
 func (r *MessageHandle) Text(text string) *SendMessageCall {
 	return &SendMessageCall{
 		client: r.client,
-		body: &SendBody{
-			Recipient: r.recipient,
+		body: &SendMessageBody{
+			Recipient: Recipient{ID: r.recipientID},
 			Message:   Message{Text: text},
 			NotifType: string(r.notifType),
 		},

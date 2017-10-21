@@ -37,15 +37,23 @@ func (c *Client) WebhookHandler() http.HandlerFunc {
 				return
 			}
 
-			var res = &ReceiveBody{}
-			err = json.NewDecoder(req.Body).Decode(res)
+			var e = &WebhookEvent{}
+			err = json.NewDecoder(req.Body).Decode(e)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-
-			// TODO: What now?
-
+			switch e.Object {
+			case "page":
+				for _, entry := range e.Entries {
+					for _, obj := range entry.Messaging {
+						switch obj := obj.(type) {
+						case *MessageEvent:
+							c.msgs <- obj
+						}
+					}
+				}
+			}
 			w.WriteHeader(http.StatusOK)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -53,6 +61,7 @@ func (c *Client) WebhookHandler() http.HandlerFunc {
 	}
 }
 
+// https://developers.facebook.com/docs/messenger-platform/webhook#security
 func verifySignature(appSecret string, bytes []byte, expectedSignature string) bool {
 	if expectedSignature == "" {
 		return false

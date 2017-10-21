@@ -20,6 +20,7 @@ type Client struct {
 	appSecret   string
 	basePath    string
 	hc          *http.Client
+	msgs        chan *MessageEvent
 }
 
 func New(accessToken, verifyToken, appSecret string) *Client {
@@ -29,7 +30,12 @@ func New(accessToken, verifyToken, appSecret string) *Client {
 		appSecret:   appSecret,
 		basePath:    fmt.Sprintf("https://graph.facebook.com/v%s/me", apiVersion),
 		hc:          http.DefaultClient,
+		msgs:        make(chan *MessageEvent, 256),
 	}
+}
+
+func (c *Client) Messages() <-chan *MessageEvent {
+	return c.msgs
 }
 
 func (c *Client) doRequest(ctx context.Context, v interface{}) (*http.Response, error) {
