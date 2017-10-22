@@ -1,39 +1,48 @@
 package airbot
 
-type Event interface{}
+type Event struct {
+	SenderID string
+	Message  string
+}
+
+type Reply struct {
+	RecipientID string
+	Message     string
+}
 
 type Listener interface {
 	Events() <-chan Event
 }
 
-type Translator func(string) string
+type Handler = func(string) (string, error)
 
-type Handler struct {
-	pattern    string
-	translator Translator
+type Command struct {
+	pattern string
+	handler Handler
 }
 
 type Responder interface {
-	Respond(string) error
+	Respond(Reply)
 }
 
 type Bot struct {
-	Listener Listener
-	handlers []*Handler
+	Listener  Listener
+	Responder Responder
+	commands  []*Command
 }
 
 func NewBot() *Bot {
 	return &Bot{
-		handlers: make([]*Handler, 0),
+		commands: make([]*Command, 0),
 	}
 }
 
-func (b *Bot) Handle(pattern string, translator Translator) {
-	handler := &Handler{
-		pattern:    pattern,
-		translator: translator,
+func (b *Bot) Handle(pattern string, handler Handler) {
+	cmd := &Command{
+		pattern: pattern,
+		handler: handler,
 	}
-	b.handlers = append(b.handlers, handler)
+	b.commands = append(b.commands, cmd)
 }
 
 func (b *Bot) Run() {
@@ -46,5 +55,25 @@ func (b *Bot) Run() {
 }
 
 func (b *Bot) dispatch(event Event) {
-	// Check if I have a hook that matches this event
+	recipientID := event.SenderID
+	for _, cmd := range b.commands {
+		if cmd.pattern == event.Message {
+			msg, err := cmd.handler(event.SenderID)
+			if err != nil {
+				b.reply(recipientID, "Something went wrong")
+				return
+			}
+			b.reply(recipientID, msg)
+			return
+		}
+	}
+	b.reply(recipientID, "No command found")
+}
+
+func (b *Bot) reply(recipientID, msg string) {
+	reply := Reply{
+		RecipientID: recipientID,
+		Message:     msg,
+	}
+	b.Responder.Respond(reply)
 }

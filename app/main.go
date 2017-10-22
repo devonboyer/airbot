@@ -7,7 +7,6 @@ import (
 
 	"github.com/devonboyer/airbot"
 	"github.com/devonboyer/airbot/messenger"
-	"github.com/devonboyer/airbot/shows"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/appengine"
@@ -59,6 +58,7 @@ func main() {
 	logger.Info("Decrypted secrets")
 
 	setupRoutes(secrets)
+	setupBot(secrets)
 
 	logrus.Info("Starting appengine server")
 
@@ -66,11 +66,21 @@ func main() {
 }
 
 func setupRoutes(secrets *airbot.Secrets) {
-	bot := shows.New(secrets.Airtable.APIKey)
-	mClient := messenger.New(secrets.Messenger.AccessToken, secrets.Messenger.VerifyToken, secrets.Messenger.AppSecret)
+	mc := messenger.New(
+		secrets.Messenger.AccessToken,
+		secrets.Messenger.VerifyToken,
+		secrets.Messenger.AppSecret,
+	)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/shows/today", bot.TodayHandler())
-	r.HandleFunc("/webhook", mClient.WebhookHandler())
+	r.HandleFunc("/webhook", mc.WebhookHandler())
 	http.Handle("/", r)
+}
+
+func setupBot(secrets *airbot.Secrets) {
+	bot := airbot.NewBot()
+	bot.Handle("shows today", func(s string) string {
+		// TODO: Go get shows from airtable and reduce to a string
+		return ""
+	})
 }
