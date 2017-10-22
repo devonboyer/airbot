@@ -1,10 +1,15 @@
 package messenger
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path"
+
+	"golang.org/x/net/context/ctxhttp"
 )
 
 const apiVersion = "2.6"
@@ -15,6 +20,7 @@ type Client struct {
 	appSecret   string
 	basePath    string
 	hc          *http.Client
+	msgs        chan *MessageEvent
 }
 
 func New(accessToken, verifyToken, appSecret string) *Client {
@@ -24,7 +30,27 @@ func New(accessToken, verifyToken, appSecret string) *Client {
 		appSecret:   appSecret,
 		basePath:    fmt.Sprintf("https://graph.facebook.com/v%s/me", apiVersion),
 		hc:          http.DefaultClient,
+		msgs:        make(chan *MessageEvent, 256),
 	}
+}
+
+func (c *Client) Messages() <-chan *MessageEvent {
+	return c.msgs
+}
+
+func (c *Client) doRequest(ctx context.Context, v interface{}) (*http.Response, error) {
+	buf := &bytes.Buffer{}
+	err := json.NewEncoder(buf).Encode(v)
+	if err != nil {
+		return nil, err
+	}
+	url := path.Join(c.basePath, "messages") + fmt.Sprintf("?accessToken=%s", c.accessToken)
+	req, _ := http.NewRequest("POST", url, buf)
+	setContentType(req.Header, "application/json")
+	if ctx == nil {
+		return c.hc.Do(req)
+	}
+	return ctxhttp.Do(ctx, c.hc, req)
 }
 
 func setContentType(headers http.Header, value string) {

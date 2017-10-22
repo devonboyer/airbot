@@ -1,34 +1,56 @@
 package messenger
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"path"
-
-	"golang.org/x/net/context/ctxhttp"
 )
 
-type NotifType string
+type (
+	NotifType    string
+	SenderAction string
+)
 
 const (
 	RegularNotif = NotifType("REGULAR")
 	SilentNotif  = NotifType("SILENT_PUSH")
 	NoNotif      = NotifType("NO_PUSH")
+	TypingOn     = SenderAction("typing_on")
+	TypingOff    = SenderAction("typing_off")
+	MarkSeen     = SenderAction("mark_seen")
 )
 
-type RequestHandle struct {
+type SendHandle struct {
 	client      *Client
 	recipientID string
 }
 
-func (c *Client) Send(recipientID string) *RequestHandle {
-	return &RequestHandle{
+func (c *Client) Send(recipientID string) *SendHandle {
+	return &SendHandle{
 		client:      c,
 		recipientID: recipientID,
 	}
+}
+
+type SenderActionCall struct {
+	client *Client
+	body   *SenderActionBody
+}
+
+func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
+	return &SenderActionCall{
+		client: r.client,
+		body: &SenderActionBody{
+			Recipient: Recipient{ID: r.recipientID},
+			Action:    string(action),
+		},
+	}
+}
+
+func (c *SenderActionCall) Do(ctx context.Context) error {
+	res, err := c.client.doRequest(ctx, c.body)
+	if err != nil {
+		return err
+	}
+	return checkResponse(res)
 }
 
 type MessageHandle struct {
@@ -37,23 +59,23 @@ type MessageHandle struct {
 	notifType   NotifType
 }
 
-func (r *RequestHandle) Message(notifType NotifType) *MessageHandle {
+func (r *SendHandle) Message(notifType NotifType) *MessageHandle {
 	return &MessageHandle{
 		client:      r.client,
 		recipientID: r.recipientID,
-		notifType:   RegularNotif,
+		notifType:   notifType,
 	}
 }
 
-type MessageRequestCall struct {
+type SendMessageCall struct {
 	client *Client
-	req    *MessageRequest
+	body   *SendMessageBody
 }
 
-func (r *MessageHandle) Text(text string) *MessageRequestCall {
-	return &MessageRequestCall{
+func (r *MessageHandle) Text(text string) *SendMessageCall {
+	return &SendMessageCall{
 		client: r.client,
-		req: &MessageRequest{
+		body: &SendMessageBody{
 			Recipient: Recipient{ID: r.recipientID},
 			Message:   Message{Text: text},
 			NotifType: string(r.notifType),
@@ -61,25 +83,10 @@ func (r *MessageHandle) Text(text string) *MessageRequestCall {
 	}
 }
 
-func (c *MessageRequestCall) Do(ctx context.Context) error {
-	res, err := c.doRequest(ctx)
+func (c *SendMessageCall) Do(ctx context.Context) error {
+	res, err := c.client.doRequest(ctx, c.body)
 	if err != nil {
 		return err
 	}
 	return checkResponse(res)
-}
-
-func (c *MessageRequestCall) doRequest(ctx context.Context) (*http.Response, error) {
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(c.req)
-	if err != nil {
-		return nil, err
-	}
-	url := path.Join(c.client.basePath, "messages") + fmt.Sprintf("?accessToken=%s", c.client.accessToken)
-	req, _ := http.NewRequest("POST", url, buf)
-	setContentType(req.Header, "application/json")
-	if ctx == nil {
-		return c.client.hc.Do(req)
-	}
-	return ctxhttp.Do(ctx, c.client.hc, req)
 }

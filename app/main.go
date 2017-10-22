@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/devonboyer/airbot/menu"
+	"google.golang.org/appengine"
+
 	"github.com/devonboyer/airbot"
 	"github.com/devonboyer/airbot/messenger"
-	"github.com/devonboyer/airbot/secrets"
-	"github.com/devonboyer/airbot/shows"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/appengine"
 )
 
 var version, env, configDir, projectID, locationID, keyRingID, cryptoKeyID, storageBucketName string
@@ -53,7 +53,7 @@ func main() {
 	logger.Info("Retrieved ciphertext")
 
 	// Decrypt secrets
-	secrets, err := secrets.Decrypt(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
+	secrets, err := airbot.DecryptSecrets(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
 	if err != nil {
 		logrus.WithError(err).Panic("Could not decrypt secrets")
 	}
@@ -61,17 +61,33 @@ func main() {
 
 	setupRoutes(secrets)
 
-	logrus.Info("Starting appengine server")
-
-	appengine.Main()
+	// Run menu or appengine server.
+	if env == "development" {
+		menu.Run(nil)
+	} else {
+		appengine.Main()
+	}
 }
 
-func setupRoutes(secrets *secrets.Secrets) {
-	bot := shows.New(secrets.Airtable.APIKey)
-	mClient := messenger.New(secrets.Messenger.AccessToken, secrets.Messenger.VerifyToken, secrets.Messenger.AppSecret)
+func setupRoutes(secrets *airbot.Secrets) {
+	mc := messenger.New(
+		secrets.Messenger.AccessToken,
+		secrets.Messenger.VerifyToken,
+		secrets.Messenger.AppSecret,
+	)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/shows/today", bot.TodayHandler())
-	r.HandleFunc("/webhook", mClient.WebhookHandler())
+	r.HandleFunc("/webhook", mc.WebhookHandler())
 	http.Handle("/", r)
+}
+
+func setupBot(secrets *airbot.Secrets) {
+	bot := airbot.NewBot()
+	bot.Listener = nil  // messenger
+	bot.Responder = nil // messenger
+	bot.Handle("shows today", func(s string) (string, error) {
+		// TODO: Go get shows from airtable and reduce results to a string
+		return "", nil
+	})
+	go bot.Run()
 }
