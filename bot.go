@@ -1,41 +1,50 @@
 package airbot
 
-type Command struct {
-	Pattern     string
-	Help        string
-	Subcommands []Command
-	Handler     func() error
+type Event interface{}
+
+type Listener interface {
+	Events() <-chan Event
 }
 
-type Receiver interface {
-	Receive() <-chan string
+type Translator func(string) string
+
+type Handler struct {
+	pattern    string
+	translator Translator
 }
 
-type Sender interface {
-	Receive() <-chan string
-	Send(string)
-	TypingOn()
-	TypingOff()
+type Responder interface {
+	Respond(string) error
 }
 
 type Bot struct {
-	Receiver Receiver
-	Sender   Sender
-	commands []Command
+	Listener Listener
+	handlers []*Handler
 }
 
-func NewBot(receiver Receiver, sender Sender) *Bot {
+func NewBot() *Bot {
 	return &Bot{
-		Receiver: receiver,
-		Sender:   sender,
-		commands: make([]Command, 0),
+		handlers: make([]*Handler, 0),
 	}
 }
 
-func (b *Bot) AddCommand(cmd Command) {
-	b.commands = append(b.commands, cmd)
+func (b *Bot) Handle(pattern string, translator Translator) {
+	handler := &Handler{
+		pattern:    pattern,
+		translator: translator,
+	}
+	b.handlers = append(b.handlers, handler)
 }
 
-func (b *Bot) Run() <-chan error {
+func (b *Bot) Run() {
+	for {
+		select {
+		case event := <-b.Listener.Events():
+			b.dispatch(event)
+		}
+	}
+}
 
+func (b *Bot) dispatch(event Event) {
+	// Check if I have a hook that matches this event
 }
