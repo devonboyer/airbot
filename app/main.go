@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/devonboyer/airbot/menu"
+	"google.golang.org/appengine"
+
 	"github.com/devonboyer/airbot"
 	"github.com/devonboyer/airbot/messenger"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/appengine"
 )
 
 var version, env, configDir, projectID, locationID, keyRingID, cryptoKeyID, storageBucketName string
@@ -58,11 +60,13 @@ func main() {
 	logger.Info("Decrypted secrets")
 
 	setupRoutes(secrets)
-	setupBot(secrets)
 
-	logrus.Info("Starting appengine server")
-
-	appengine.Main()
+	// Run menu or appengine server.
+	if env == "development" {
+		menu.Run(nil)
+	} else {
+		appengine.Main()
+	}
 }
 
 func setupRoutes(secrets *airbot.Secrets) {
