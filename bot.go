@@ -68,7 +68,7 @@ func (b *Bot) dispatch(event Event) {
 			return
 		}
 	}
-	b.reply(recipientID, "No command found")
+	b.reply(recipientID, "I don't understand 🤷")
 }
 
 func (b *Bot) reply(recipientID, msg string) {
