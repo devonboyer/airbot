@@ -79,8 +79,11 @@ func setupRoutes(secrets *airbot.Secrets) {
 
 func setupBot(secrets *airbot.Secrets) {
 	bot := airbot.NewBot()
-	bot.Handle("shows today", func(s string) string {
-		// TODO: Go get shows from airtable and reduce to a string
-		return ""
+	bot.Listener = nil  // messenger
+	bot.Responder = nil // messenger
+	bot.Handle("shows today", func(s string) (string, error) {
+		// TODO: Go get shows from airtable and reduce results to a string
+		return "", nil
 	})
+	go bot.Run()
 }

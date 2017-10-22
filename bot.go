@@ -14,7 +14,7 @@ type Listener interface {
 	Events() <-chan Event
 }
 
-type Handler = func(string) (string, error)
+type Handler func(string) (string, error)
 
 type Command struct {
 	pattern string
@@ -57,6 +57,7 @@ func (b *Bot) Run() {
 func (b *Bot) dispatch(event Event) {
 	recipientID := event.SenderID
 	for _, cmd := range b.commands {
+		// For now, use very simplistic string comparison to dispatch to correct handler.
 		if cmd.pattern == event.Message {
 			msg, err := cmd.handler(event.SenderID)
 			if err != nil {
