@@ -24,7 +24,7 @@ type command struct {
 
 var (
 	mainMenu menu
-	secrets  = airbot.MustReadSecrets("config")
+	secrets  *airbot.Secrets
 )
 
 func init() {
@@ -35,7 +35,11 @@ func init() {
 	}
 }
 
-func Run(args []string) { mainMenu.run(args) }
+func Run(args []string) {
+	// This is a hack to avoid trying to parse secrets in production.
+	secrets = airbot.MustReadSecrets("config")
+	mainMenu.run(args)
+}
 
 func (m menu) run(args []string) {
 	for {
