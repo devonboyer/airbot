@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"os"
 
-	"google.golang.org/appengine"
-
 	"github.com/devonboyer/airbot"
 	"github.com/devonboyer/airbot/cli"
 	"github.com/devonboyer/airbot/messenger"
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/appengine"
 )
 
 var version, env, configDir, projectID, locationID, keyRingID, cryptoKeyID, storageBucketName string
@@ -76,14 +74,12 @@ func main() {
 		defer bot.Stop()
 		defer source.Stop()
 
-		setupRoutes(secrets, client)
+		setupRoutes(client)
 
 		appengine.Main()
 	}
 }
 
-func setupRoutes(secrets *airbot.Secrets, client *messenger.Client) {
-	r := mux.NewRouter()
-	r.HandleFunc("/webhook", client.WebhookHandler())
-	http.Handle("/", r)
+func setupRoutes(client *messenger.Client) {
+	http.HandleFunc("/webhook", client.WebhookHandler())
 }
