@@ -1,4 +1,4 @@
-package menu
+package cli
 
 import (
 	"bufio"
@@ -84,8 +84,9 @@ func (m menu) String() string {
 
 func botCommand(args []string) error {
 	fmt.Println("Starting bot...")
-	listener := newListener()
-	b := airbot.NewBot(secrets, listener, bot.SenderFunc(send))
+
+	source := newCLISource()
+	b := airbot.NewBot(secrets, source)
 	b.Run()
 	defer b.Stop()
 
@@ -98,24 +99,6 @@ func botCommand(args []string) error {
 			fmt.Println("Stopping bot...")
 			return nil
 		}
-		listener.messagesChan <- bot.Message{SenderID: "", Text: line}
+		source.msgs <- bot.Message{Text: line}
 	}
-}
-
-type listener struct {
-	messagesChan chan bot.Message
-}
-
-func newListener() *listener {
-	return &listener{
-		messagesChan: make(chan bot.Message),
-	}
-}
-
-func (l *listener) Messages() <-chan bot.Message {
-	return l.messagesChan
-}
-
-func send(reply bot.Reply) {
-	fmt.Println(reply.Text)
 }

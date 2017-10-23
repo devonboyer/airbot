@@ -8,44 +8,25 @@ import (
 	"github.com/devonboyer/airbot/messenger"
 )
 
-type MessengerSender struct {
-	client *messenger.Client
-}
-
-func NewMessengerSender(client *messenger.Client) *MessengerSender {
-	return &MessengerSender{
-		client: client,
-	}
-}
-
-func (m *MessengerSender) Send(reply bot.Reply) {
-	ctx := context.Background()
-	m.client.
-		Send(reply.RecipientID).
-		Message(messenger.RegularNotif).
-		Text(reply.Text).
-		Do(ctx)
-}
-
-type MessengerListener struct {
+type MessengerSource struct {
 	client  *messenger.Client
 	msgs    chan bot.Message
 	stopped chan struct{}
 	wg      sync.WaitGroup
 }
 
-func NewMessengerListener(client *messenger.Client) *MessengerListener {
-	listener := &MessengerListener{
+func NewMessengerSource(client *messenger.Client) *MessengerSource {
+	source := &MessengerSource{
 		client:  client,
 		msgs:    make(chan bot.Message),
 		stopped: make(chan struct{}),
 		wg:      sync.WaitGroup{},
 	}
-	go listener.convertChannels()
-	return listener
+	go source.convertChannels()
+	return source
 }
 
-func (m *MessengerListener) convertChannels() {
+func (m *MessengerSource) convertChannels() {
 	m.wg.Add(1)
 	defer m.wg.Done()
 	for {
@@ -61,11 +42,20 @@ func (m *MessengerListener) convertChannels() {
 	}
 }
 
-func (m *MessengerListener) Messages() <-chan bot.Message {
+func (m *MessengerSource) Messages() <-chan bot.Message {
 	return m.msgs
 }
 
-func (m *MessengerListener) Stop() {
+func (m *MessengerSource) Send(reply bot.Reply) {
+	ctx := context.Background()
+	m.client.
+		Send(reply.RecipientID).
+		Message(messenger.RegularNotif).
+		Text(reply.Text).
+		Do(ctx)
+}
+
+func (m *MessengerSource) Stop() {
 	close(m.stopped)
 	m.wg.Wait()
 }
