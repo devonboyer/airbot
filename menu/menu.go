@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/devonboyer/airbot"
+	"github.com/devonboyer/airbot/bot"
 )
 
 const prompt = "airbot [? for menu]: "
@@ -19,7 +22,10 @@ type command struct {
 	runFunc func(args []string) error
 }
 
-var mainMenu menu
+var (
+	mainMenu menu
+	secrets  = airbot.MustReadSecrets("config")
+)
 
 func init() {
 	mainMenu = menu{
@@ -78,6 +84,11 @@ func (m menu) String() string {
 
 func botCommand(args []string) error {
 	fmt.Println("Starting bot...")
+	listener := newListener()
+	b := airbot.NewBot(secrets, listener, bot.SenderFunc(send))
+	b.Run()
+	defer b.Stop()
+
 	for {
 		fmt.Print("> ")
 		buf := bufio.NewReader(os.Stdin)
@@ -87,6 +98,24 @@ func botCommand(args []string) error {
 			fmt.Println("Stopping bot...")
 			return nil
 		}
-		fmt.Printf("echo %s\n", line)
+		listener.messagesChan <- bot.Message{SenderID: "", Text: line}
 	}
+}
+
+type listener struct {
+	messagesChan chan bot.Message
+}
+
+func newListener() *listener {
+	return &listener{
+		messagesChan: make(chan bot.Message),
+	}
+}
+
+func (l *listener) Messages() <-chan bot.Message {
+	return l.messagesChan
+}
+
+func send(reply bot.Reply) {
+	fmt.Println(reply.Text)
 }
