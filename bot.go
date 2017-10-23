@@ -31,10 +31,11 @@ func (b *Bot) setupHandlers() {
 	b.Handle("shows today", func(s string) (string, error) {
 		ctx := context.Background()
 		shows := &ShowList{}
+		formulaFmt := "AND({Day of Week} = '%s', {Status} = 'Airing')"
 		err := b.Base(b.baseID).
 			Table(b.tableID).
 			List().
-			FilterByFormula(fmt.Sprintf("{Day of Week} = '%s'", time.Now().Weekday())).
+			FilterByFormula(fmt.Sprintf(formulaFmt, time.Now().Weekday())).
 			Do(ctx, shows)
 		if err != nil {
 			return "", err
