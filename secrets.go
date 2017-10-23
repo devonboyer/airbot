@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"golang.org/x/oauth2/google"
 	cloudkms "google.golang.org/api/cloudkms/v1"
@@ -55,4 +57,14 @@ func DecryptSecrets(ctx context.Context, projectID, locationID, keyRingID, crypt
 		return nil, err
 	}
 	return secrets, nil
+}
+
+func MustReadSecrets(dir string) *Secrets {
+	file, err := os.Open(filepath.Join(dir, "secrets.json"))
+	if err != nil {
+		panic(err)
+	}
+	var secrets = &Secrets{}
+	json.NewDecoder(file).Decode(secrets)
+	return secrets
 }

@@ -75,19 +75,7 @@ func setupRoutes(secrets *airbot.Secrets) {
 		secrets.Messenger.VerifyToken,
 		secrets.Messenger.AppSecret,
 	)
-
 	r := mux.NewRouter()
 	r.HandleFunc("/webhook", mc.WebhookHandler())
 	http.Handle("/", r)
-}
-
-func setupBot(secrets *airbot.Secrets) {
-	bot := airbot.NewBot()
-	bot.Listener = nil  // messenger
-	bot.Responder = nil // messenger
-	bot.Handle("shows today", func(s string) (string, error) {
-		// TODO: Go get shows from airtable and reduce results to a string
-		return "", nil
-	})
-	go bot.Run()
 }

@@ -1,80 +1,53 @@
 package airbot
 
-type Event struct {
-	SenderID string
-	Message  string
-}
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"time"
 
-type Reply struct {
-	RecipientID string
-	Message     string
-}
-
-type Listener interface {
-	Events() <-chan Event
-}
-
-type Handler func(string) (string, error)
-
-type Command struct {
-	pattern string
-	handler Handler
-}
-
-type Responder interface {
-	Respond(Reply)
-}
+	"github.com/devonboyer/airbot/airtable"
+	"github.com/devonboyer/airbot/bot"
+)
 
 type Bot struct {
-	Listener  Listener
-	Responder Responder
-	commands  []*Command
+	*bot.Bot
+	*airtable.Client
+	baseID, tableID string
 }
 
-func NewBot() *Bot {
-	return &Bot{
-		commands: make([]*Command, 0),
+func NewBot(secrets *Secrets, listener bot.Listener, sender bot.Sender) *Bot {
+	bot := &Bot{
+		bot.New(listener, sender),
+		airtable.New(secrets.Airtable.APIKey),
+		"appwqWzX94IXnLEp5",
+		"Shows",
 	}
+	bot.setupHandlers()
+	return bot
 }
 
-func (b *Bot) Handle(pattern string, handler Handler) {
-	cmd := &Command{
-		pattern: pattern,
-		handler: handler,
-	}
-	b.commands = append(b.commands, cmd)
-}
-
-func (b *Bot) Run() {
-	for {
-		select {
-		case event := <-b.Listener.Events():
-			b.dispatch(event)
+func (b *Bot) setupHandlers() {
+	b.Handle("shows today", func(s string) (string, error) {
+		ctx := context.Background()
+		shows := &ShowList{}
+		err := b.Base(b.baseID).
+			Table(b.tableID).
+			List().
+			FilterByFormula(fmt.Sprintf("{Day of Week} = '%s'", time.Now().Weekday())).
+			Do(ctx, shows)
+		if err != nil {
+			return "", err
 		}
-	}
+		return processShows(shows), nil
+	})
 }
 
-func (b *Bot) dispatch(event Event) {
-	recipientID := event.SenderID
-	for _, cmd := range b.commands {
-		// For now, use very simplistic string comparison to dispatch to correct handler.
-		if cmd.pattern == event.Message {
-			msg, err := cmd.handler(event.SenderID)
-			if err != nil {
-				b.reply(recipientID, "Something went wrong")
-				return
-			}
-			b.reply(recipientID, msg)
-			return
-		}
+func processShows(shows *ShowList) string {
+	buf := &bytes.Buffer{}
+	fmt.Fprintln(buf, "Shows on tonight:")
+	for _, s := range shows.Records {
+		fmt.Fprintln(buf, s.Fields.Name)
 	}
-	b.reply(recipientID, "I don't understand 🤷")
-}
-
-func (b *Bot) reply(recipientID, msg string) {
-	reply := Reply{
-		RecipientID: recipientID,
-		Message:     msg,
-	}
-	b.Responder.Respond(reply)
+	return buf.String()
 }
