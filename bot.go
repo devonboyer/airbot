@@ -18,7 +18,7 @@ type Bot struct {
 
 func NewBot(secrets *Secrets, listener bot.Listener, sender bot.Sender) *Bot {
 	bot := &Bot{
-		bot.New(listener, sender),
+		bot.New(listener, sender), //
 		airtable.New(secrets.Airtable.APIKey),
 		"appwqWzX94IXnLEp5",
 		"Shows",
