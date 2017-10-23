@@ -20,26 +20,16 @@ type Reply struct {
 	Text        string
 }
 
-type Listener interface {
+type Source interface {
 	Messages() <-chan Message
-}
-
-type Sender interface {
 	Send(Reply)
-}
-
-type SenderFunc func(Reply)
-
-func (f SenderFunc) Send(r Reply) {
-	f(r)
 }
 
 type Bot struct {
 	NotFoundReply string
 	ErrorReply    string
 
-	listener Listener
-	sender   Sender
+	source   Source
 	mu       sync.Mutex
 	handlers []*handler
 	stopped  chan struct{}
@@ -51,12 +41,11 @@ type handler struct {
 	handleFunc func(string) (string, error)
 }
 
-func New(listener Listener, sender Sender) *Bot {
+func New(source Source) *Bot {
 	return &Bot{
 		NotFoundReply: defaultNotFoundReply,
 		ErrorReply:    defaultErrorReply,
-		listener:      listener,
-		sender:        sender,
+		source:        source,
 		mu:            sync.Mutex{},
 		handlers:      make([]*handler, 0),
 		stopped:       make(chan struct{}),
@@ -81,7 +70,7 @@ func (b *Bot) run() {
 	defer b.wg.Done()
 	for {
 		select {
-		case msg := <-b.listener.Messages():
+		case msg := <-b.source.Messages():
 			b.dispatch(msg)
 		case <-b.stopped:
 			return
@@ -112,7 +101,7 @@ func (b *Bot) reply(recipientID, msg string) {
 		RecipientID: recipientID,
 		Text:        msg,
 	}
-	b.sender.Send(reply)
+	b.source.Send(reply)
 }
 
 func (b *Bot) Stop() {
