@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/devonboyer/airbot"
-	"github.com/devonboyer/airbot/cli"
 	"github.com/devonboyer/airbot/messenger"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/appengine"
@@ -58,13 +57,14 @@ func main() {
 	logger.Info("Decrypted secrets")
 
 	if env == "development" {
-		cli.Run(nil)
+		menu.Run(nil)
 	} else {
 		// Get messenger client
 		client := messenger.New(
 			secrets.Messenger.AccessToken,
 			secrets.Messenger.VerifyToken,
 			secrets.Messenger.AppSecret,
+			messenger.WithLogger(logger),
 		)
 
 		// Run bot
@@ -74,12 +74,12 @@ func main() {
 		defer bot.Stop()
 		defer source.Stop()
 
-		setupRoutes(client)
+		setupRoutes(client, bot)
 
 		appengine.Main()
 	}
 }
 
-func setupRoutes(client *messenger.Client) {
-	http.HandleFunc("/webhook", client.WebhookHandler())
+func setupRoutes(client *messenger.Client, bot *Bot) {
+	http.HandleFunc("/webhook", client.WebhookHandler(bot))
 }

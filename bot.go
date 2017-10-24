@@ -7,18 +7,18 @@ import (
 	"time"
 
 	"github.com/devonboyer/airbot/airtable"
-	"github.com/devonboyer/airbot/bot"
+	"github.com/devonboyer/airbot/botengine"
 )
 
 type Bot struct {
-	*bot.Bot
+	*botengine.Bot
 	*airtable.Client
 	baseID, tableID string
 }
 
-func NewBot(secrets *Secrets, source bot.Source) *Bot {
+func NewBot(secrets *Secrets) *Bot {
 	bot := &Bot{
-		bot.New(source),
+		botengine.New(),
 		airtable.New(secrets.Airtable.APIKey),
 		"appwqWzX94IXnLEp5",
 		"Shows",

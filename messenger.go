@@ -2,60 +2,37 @@ package airbot
 
 import (
 	"context"
-	"sync"
 
-	"github.com/devonboyer/airbot/bot"
+	"github.com/devonboyer/airbot/botengine"
 	"github.com/devonboyer/airbot/messenger"
 )
 
-type MessengerSource struct {
-	client  *messenger.Client
-	msgs    chan bot.Message
-	stopped chan struct{}
-	wg      sync.WaitGroup
+type MessengerQueue struct {
+	botengine.Queue
 }
 
-func NewMessengerSource(client *messenger.Client) *MessengerSource {
-	source := &MessengerSource{
-		client:  client,
-		msgs:    make(chan bot.Message),
-		stopped: make(chan struct{}),
-		wg:      sync.WaitGroup{},
-	}
-	go source.convertChannels()
-	return source
+func (q *MessengerQueue) Push(ctx context.Context, ev botengine.Event) {
+	q.Push(ctx, ev)
 }
 
-func (m *MessengerSource) convertChannels() {
-	m.wg.Add(1)
-	defer m.wg.Done()
-	for {
-		select {
-		case msg := <-m.client.Messages():
-			m.msgs <- bot.Message{
-				SenderID: msg.Sender.ID,
-				Text:     msg.Message.Text,
-			}
-		case <-m.stopped:
-			return
-		}
-	}
+func (q *MessengerQueue) Pop(ctx context.Context) botengine.Event {
+	return q.Pop(ctx)
 }
 
-func (m *MessengerSource) Messages() <-chan bot.Message {
-	return m.msgs
+// Implements messenger.EventHandler interface
+func (q *MessengerQueue) HandleEvent(ev *messenger.WebhookEvent) {
+	// Convert between event types
 }
 
-func (m *MessengerSource) Send(reply bot.Reply) {
-	ctx := context.Background()
-	m.client.
-		Send(reply.RecipientID).
-		Message(messenger.RegularNotif).
-		Text(reply.Text).
-		Do(ctx)
+func (q *MessengerQueue) Close() {
+	q.Close()
 }
 
-func (m *MessengerSource) Stop() {
-	close(m.stopped)
-	m.wg.Wait()
-}
+// func (m *MessengerSource) Send(reply bot.Reply) {
+// 	ctx := context.Background()
+// 	m.client.
+// 		Send(reply.RecipientID).
+// 		Message(messenger.RegularNotif).
+// 		Text(reply.Text).
+// 		Do(ctx)
+// }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"path"
 
@@ -14,28 +15,61 @@ import (
 
 const apiVersion = "2.6"
 
+type logger interface {
+	Printf(string, ...interface{})
+}
+
+type ClientOption interface {
+	Apply(*Client)
+}
+
+func WithHTTPClient(client *http.Client) ClientOption {
+	return withHTTPClient{client}
+}
+
+type withHTTPClient struct{ client *http.Client }
+
+func (w withHTTPClient) Apply(c *Client) {
+	c.hc = w.client
+}
+
+func WithLogger(logger logger) ClientOption {
+	return withLogger{logger}
+}
+
+type withLogger struct{ logger logger }
+
+func (w withLogger) Apply(c *Client) {
+	c.logger = w.logger
+}
+
+var nopLogger = log.New(ioutil.Discard, "", 0)
+
 type Client struct {
 	accessToken string
 	verifyToken string
 	appSecret   string
 	basePath    string
 	hc          *http.Client
-	msgs        chan *MessageEvent
+	logger      logger
 }
 
-func New(accessToken, verifyToken, appSecret string) *Client {
-	return &Client{
+func New(accessToken, verifyToken, appSecret string, opts ...ClientOption) *Client {
+	o := []ClientOption{
+		WithHTTPClient(http.DefaultClient),
+		WithLogger(nopLogger),
+	}
+	opts = append(o, opts...)
+	client := &Client{
 		accessToken: accessToken,
 		verifyToken: verifyToken,
 		appSecret:   appSecret,
 		basePath:    fmt.Sprintf("https://graph.facebook.com/v%s/me", apiVersion),
-		hc:          http.DefaultClient,
-		msgs:        make(chan *MessageEvent, 256),
 	}
-}
-
-func (c *Client) Messages() <-chan *MessageEvent {
-	return c.msgs
+	for _, opt := range opts {
+		opt.Apply(client)
+	}
+	return client
 }
 
 func (c *Client) doRequest(ctx context.Context, v interface{}) (*http.Response, error) {
