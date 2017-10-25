@@ -28,7 +28,7 @@ func NewBot(secrets *Secrets, source botengine.Source, sink botengine.Sink) *Bot
 }
 
 func (b *Bot) setupHandlers() {
-	b.Handle("shows today", func(s string) (string, error) {
+	b.Handle("shows today", func(usr botengine.User) (string, error) {
 		ctx := context.Background()
 		shows := &ShowList{}
 		formulaFmt := "AND({Day of Week} = '%s', {Status} = 'Airing')"

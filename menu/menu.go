@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/devonboyer/airbot"
-	"github.com/devonboyer/airbot/bot"
 )
 
 const prompt = "airbot [? for menu]: "
@@ -89,11 +88,6 @@ func (m menu) String() string {
 func botCommand(args []string) error {
 	fmt.Println("Starting bot...")
 
-	source := newCLISource()
-	b := airbot.NewBot(secrets, source)
-	b.Run()
-	defer b.Stop()
-
 	for {
 		fmt.Print("> ")
 		buf := bufio.NewReader(os.Stdin)
@@ -103,6 +97,5 @@ func botCommand(args []string) error {
 			fmt.Println("Stopping bot...")
 			return nil
 		}
-		source.msgs <- bot.Message{Text: line}
 	}
 }
