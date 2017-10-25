@@ -28,3 +28,7 @@ func (m *mockSink) Flush(ev *Event) error {
 }
 
 func (m *mockSink) Close() {}
+
+func TestEngine() {
+
+}

@@ -33,6 +33,16 @@ func (w withErrorReply) Apply(b *Engine) {
 	b.errorReply = string(w)
 }
 
+func WithNumGoroutines(n int) Option {
+	return withNumGoroutines(n)
+}
+
+type withNumGoroutines int
+
+func (w withNumGoroutines) Apply(e *Engine) {
+	e.numGoroutines = int(w)
+}
+
 type Event interface{} // TODO
 
 type Source interface {
@@ -59,7 +69,10 @@ type Engine struct {
 	source Source
 	sink   Sink
 
-	notFoundReply, errorReply string
+	// options
+	notFoundReply string
+	errorReply    string
+	numGoroutines int
 
 	mu       sync.Mutex
 	handlers []*handler
@@ -69,11 +82,12 @@ type Engine struct {
 
 func New(source Source, sink Sink, opts ...Option) *Engine {
 	o := []Option{
+		WithNumGoroutines(1),
 		WithNotFoundReply(defaultNotFoundReply),
 		WithErrorReply(defaultErrorReply),
 	}
 	opts = append(o, opts...)
-	bot := &Engine{
+	eng := &Engine{
 		source:   source,
 		sink:     sink,
 		mu:       sync.Mutex{},
@@ -82,46 +96,48 @@ func New(source Source, sink Sink, opts ...Option) *Engine {
 		wg:       sync.WaitGroup{},
 	}
 	for _, opt := range opts {
-		opt.Apply(bot)
+		opt.Apply(eng)
 	}
-	return bot
+	return eng
 }
 
-func (b *Engine) Handle(pattern string, handleFunc func(string) (string, error)) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.handlers = append(b.handlers, &handler{
+func (e *Engine) Handle(pattern string, handleFunc func(string) (string, error)) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.handlers = append(e.handlers, &handler{
 		pattern:    pattern,
 		handleFunc: handleFunc,
 	})
 }
 
-func (b *Engine) Run() {
-	go b.run()
+func (e *Engine) Run() {
+	for i := 0; i < e.numGoroutines; i++ {
+		go e.run()
+	}
 }
 
-func (b *Engine) run() {
-	b.wg.Add(1)
-	defer b.wg.Done()
+func (e *Engine) run() {
+	e.wg.Add(1)
+	defer e.wg.Done()
 
 	for {
 		select {
-		case ev := <-b.source.Events():
-			b.dispatch(ev)
-		case <-b.stopped:
+		case ev := <-e.source.Events():
+			e.dispatch(ev)
+		case <-e.stopped:
 			return
 		}
 	}
 }
 
-func (b *Engine) dispatch(ev *Event) {
+func (e *Engine) dispatch(ev *Event) {
 	// Handle event
 }
 
-func (b *Engine) Stop() {
-	close(b.stopped)
-	b.wg.Wait()
+func (e *Engine) Stop() {
+	close(e.stopped)
+	e.wg.Wait()
 
-	b.source.Close()
-	b.sink.Close()
+	e.source.Close()
+	e.sink.Close()
 }
