@@ -41,7 +41,13 @@ func (w withNumGoroutines) Apply(e *Engine) {
 	e.numGoroutines = int(w)
 }
 
-type Event interface{} // TODO
+type Event struct {
+	Type   string
+	Object interface{}
+}
+
+type Message struct {
+}
 
 type Source interface {
 	Events() <-chan *Event

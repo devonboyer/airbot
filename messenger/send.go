@@ -32,13 +32,13 @@ func (c *Client) Send(recipientID string) *SendHandle {
 
 type SenderActionCall struct {
 	client *Client
-	body   *SenderActionBody
+	data   *SenderActionMarshaler
 }
 
 func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
 	return &SenderActionCall{
 		client: r.client,
-		body: &SenderActionBody{
+		data: &SenderActionMarshaler{
 			Recipient: Recipient{ID: r.recipientID},
 			Action:    string(action),
 		},
@@ -46,7 +46,7 @@ func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
 }
 
 func (c *SenderActionCall) Do(ctx context.Context) error {
-	res, err := c.client.doRequest(ctx, c.body)
+	res, err := c.client.doRequest(ctx, c.data)
 	if err != nil {
 		return err
 	}
@@ -69,13 +69,13 @@ func (r *SendHandle) Message(notifType NotifType) *MessageHandle {
 
 type SendMessageCall struct {
 	client *Client
-	body   *SendMessageBody
+	data   *MessageMarshaler
 }
 
 func (r *MessageHandle) Text(text string) *SendMessageCall {
 	return &SendMessageCall{
 		client: r.client,
-		body: &SendMessageBody{
+		data: &MessageMarshaler{
 			Recipient: Recipient{ID: r.recipientID},
 			Message:   Message{Text: text},
 			NotifType: string(r.notifType),
@@ -84,7 +84,7 @@ func (r *MessageHandle) Text(text string) *SendMessageCall {
 }
 
 func (c *SendMessageCall) Do(ctx context.Context) error {
-	res, err := c.client.doRequest(ctx, c.body)
+	res, err := c.client.doRequest(ctx, c.data)
 	if err != nil {
 		return err
 	}

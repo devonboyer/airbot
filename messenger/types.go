@@ -8,13 +8,13 @@ type Message struct {
 	Text string `json:"text,omitempty"`
 }
 
-type SendMessageBody struct {
+type MessageMarshaler struct {
 	Recipient Recipient `json:"recipient"`
 	Message   Message   `json:"message"`
 	NotifType string    `json:"notification_type"`
 }
 
-type SenderActionBody struct {
+type SenderActionMarshaler struct {
 	Recipient Recipient `json:"recipient"`
 	Action    string    `json:"sender_action"`
 }
