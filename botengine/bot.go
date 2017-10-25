@@ -33,8 +33,21 @@ func (w withErrorReply) Apply(b *Bot) {
 	b.errorReply = string(w)
 }
 
+type Event interface{} // TODO
+
+type Source interface {
+	Events() <-chan Event
+	Close()
+}
+
+type Sink interface {
+	Flush(Event) error
+	Close()
+}
+
 type Bot struct {
-	in, out Queue
+	source Source
+	sink   Sink
 
 	notFoundReply, errorReply string
 
@@ -49,15 +62,15 @@ type handler struct {
 	handleFunc func(string) (string, error)
 }
 
-func New(in, out Queue, opts ...Option) *Bot {
+func New(source Source, sink Sink, opts ...Option) *Bot {
 	o := []Option{
 		WithNotFoundReply(defaultNotFoundReply),
 		WithErrorReply(defaultErrorReply),
 	}
 	opts = append(o, opts...)
 	bot := &Bot{
-		in:       in,
-		out:      out,
+		source:   source,
+		sink:     sink,
 		mu:       sync.Mutex{},
 		handlers: make([]*handler, 0),
 		stopped:  make(chan struct{}),
@@ -91,7 +104,6 @@ func (b *Bot) Stop() {
 	close(b.stopped)
 	b.wg.Wait()
 
-	// Close the queues.
-	b.in.Close()
-	b.out.Close()
+	b.source.Close()
+	b.sink.Close()
 }
