@@ -67,19 +67,20 @@ func main() {
 			messenger.WithLogger(logger),
 		)
 
+		source := airbot.NewMessengerSource()
+		sink := airbot.NewMessengerSink(client)
+
 		// Run bot
-		source := airbot.NewMessengerSource(client)
-		bot := airbot.NewBot(secrets, source)
+		bot := airbot.NewBot(secrets, source, sink)
 		bot.Run()
 		defer bot.Stop()
-		defer source.Stop()
 
-		setupRoutes(client, bot)
+		setupRoutes(client, source)
 
 		appengine.Main()
 	}
 }
 
-func setupRoutes(client *messenger.Client, bot *Bot) {
-	http.HandleFunc("/webhook", client.WebhookHandler(bot))
+func setupRoutes(client *messenger.Client, evh messenger.EventHandler) {
+	http.HandleFunc("/webhook", client.WebhookHandler(evh))
 }

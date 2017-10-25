@@ -1,5 +1,7 @@
 package botengine
 
+import "testing"
+
 const bufferSize = 1024
 
 type mockSource struct {
@@ -29,6 +31,6 @@ func (m *mockSink) Flush(ev *Event) error {
 
 func (m *mockSink) Close() {}
 
-func TestEngine() {
+func TestEngine(t *testing.T) {
 
 }

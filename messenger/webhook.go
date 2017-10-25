@@ -14,7 +14,7 @@ type EventHandler interface {
 	HandleEvent(*WebhookEvent)
 }
 
-func (c *Client) WebhookHandler(handler EventHandler) http.HandlerFunc {
+func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "GET":
@@ -53,8 +53,7 @@ func (c *Client) WebhookHandler(handler EventHandler) http.HandlerFunc {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			// FIXME: Probably a bad idea to call handler synchronously
-			handler.HandleEvent(ev)
+			evh.HandleEvent(ev)
 
 			w.WriteHeader(http.StatusOK)
 		default:

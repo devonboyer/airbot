@@ -1,8 +1,6 @@
 package botengine
 
-import (
-	"sync"
-)
+import "sync"
 
 const (
 	defaultNotFoundReply = "I don't understand 🤷"
