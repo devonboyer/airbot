@@ -11,14 +11,14 @@ import (
 )
 
 type Bot struct {
-	*botengine.Bot
+	*botengine.Engine
 	*airtable.Client
 	baseID, tableID string
 }
 
-func NewBot(secrets *Secrets) *Bot {
+func NewBot(secrets *Secrets, source botengine.Source, sink botengine.Sink) *Bot {
 	bot := &Bot{
-		botengine.New(),
+		botengine.New(source, sink),
 		airtable.New(secrets.Airtable.APIKey),
 		"appwqWzX94IXnLEp5",
 		"Shows",

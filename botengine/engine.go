@@ -10,7 +10,7 @@ const (
 )
 
 type Option interface {
-	Apply(*Bot)
+	Apply(*Engine)
 }
 
 func WithNotFoundReply(s string) Option {
@@ -19,7 +19,7 @@ func WithNotFoundReply(s string) Option {
 
 type withNotFoundReply string
 
-func (w withNotFoundReply) Apply(b *Bot) {
+func (w withNotFoundReply) Apply(b *Engine) {
 	b.notFoundReply = string(w)
 }
 
@@ -29,19 +29,19 @@ func WithErrorReply(s string) Option {
 
 type withErrorReply string
 
-func (w withErrorReply) Apply(b *Bot) {
+func (w withErrorReply) Apply(b *Engine) {
 	b.errorReply = string(w)
 }
 
 type Event interface{} // TODO
 
 type Source interface {
-	Events() <-chan Event
+	Events() <-chan *Event
 	Close()
 }
 
 type Sink interface {
-	Flush(Event) error
+	Flush(*Event) error
 	Close()
 }
 
@@ -50,7 +50,12 @@ type handler struct {
 	handleFunc func(string) (string, error)
 }
 
-type Bot struct {
+// Engine provides the brain of a bot by dispatching events to handlers.
+//
+// type Bot struct {
+//     *botengine.Engine
+// }
+type Engine struct {
 	source Source
 	sink   Sink
 
@@ -62,13 +67,13 @@ type Bot struct {
 	wg       sync.WaitGroup
 }
 
-func New(source Source, sink Sink, opts ...Option) *Bot {
+func New(source Source, sink Sink, opts ...Option) *Engine {
 	o := []Option{
 		WithNotFoundReply(defaultNotFoundReply),
 		WithErrorReply(defaultErrorReply),
 	}
 	opts = append(o, opts...)
-	bot := &Bot{
+	bot := &Engine{
 		source:   source,
 		sink:     sink,
 		mu:       sync.Mutex{},
@@ -82,7 +87,7 @@ func New(source Source, sink Sink, opts ...Option) *Bot {
 	return bot
 }
 
-func (b *Bot) Handle(pattern string, handleFunc func(string) (string, error)) {
+func (b *Engine) Handle(pattern string, handleFunc func(string) (string, error)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.handlers = append(b.handlers, &handler{
@@ -91,11 +96,11 @@ func (b *Bot) Handle(pattern string, handleFunc func(string) (string, error)) {
 	})
 }
 
-func (b *Bot) Run() {
+func (b *Engine) Run() {
 	go b.run()
 }
 
-func (b *Bot) run() {
+func (b *Engine) run() {
 	b.wg.Add(1)
 	defer b.wg.Done()
 
@@ -109,11 +114,11 @@ func (b *Bot) run() {
 	}
 }
 
-func (b *Bot) dispatch(ev Event) {
+func (b *Engine) dispatch(ev *Event) {
 	// Handle event
 }
 
-func (b *Bot) Stop() {
+func (b *Engine) Stop() {
 	close(b.stopped)
 	b.wg.Wait()
 

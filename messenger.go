@@ -6,10 +6,10 @@ import (
 )
 
 type MessengerSource struct {
-	eventsChan chan botengine.Event
+	eventsChan chan *botengine.Event
 }
 
-func (s *MessengerSource) Events() <-chan Event {
+func (s *MessengerSource) Events() <-chan *botengine.Event {
 	return s.eventsChan
 }
 
@@ -26,7 +26,7 @@ type MessengerSink struct {
 	client *messenger.Client
 }
 
-func (s *MessengerSource) Flush(ev botengine.Event) {
+func (s *MessengerSource) Flush(ev *botengine.Event) {
 
 }
 
