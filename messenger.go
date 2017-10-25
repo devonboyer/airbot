@@ -1,61 +1,51 @@
 package airbot
 
 import (
-	"context"
-	"sync"
-
-	"github.com/devonboyer/airbot/bot"
+	"github.com/devonboyer/airbot/botengine"
 	"github.com/devonboyer/airbot/messenger"
 )
 
+const bufferSize = 1024
+
 type MessengerSource struct {
-	client  *messenger.Client
-	msgs    chan bot.Message
-	stopped chan struct{}
-	wg      sync.WaitGroup
+	eventsChan chan *botengine.Event
 }
 
-func NewMessengerSource(client *messenger.Client) *MessengerSource {
-	source := &MessengerSource{
-		client:  client,
-		msgs:    make(chan bot.Message),
-		stopped: make(chan struct{}),
-		wg:      sync.WaitGroup{},
-	}
-	go source.convertChannels()
-	return source
-}
-
-func (m *MessengerSource) convertChannels() {
-	m.wg.Add(1)
-	defer m.wg.Done()
-	for {
-		select {
-		case msg := <-m.client.Messages():
-			m.msgs <- bot.Message{
-				SenderID: msg.Sender.ID,
-				Text:     msg.Message.Text,
-			}
-		case <-m.stopped:
-			return
-		}
+func NewMessengerSource() *MessengerSource {
+	return &MessengerSource{
+		eventsChan: make(chan *botengine.Event, bufferSize),
 	}
 }
 
-func (m *MessengerSource) Messages() <-chan bot.Message {
-	return m.msgs
+func (s *MessengerSource) Events() <-chan *botengine.Event {
+	return s.eventsChan
 }
 
-func (m *MessengerSource) Send(reply bot.Reply) {
-	ctx := context.Background()
-	m.client.
-		Send(reply.RecipientID).
-		Message(messenger.RegularNotif).
-		Text(reply.Text).
-		Do(ctx)
+// Implements messenger.EventHandler interface
+func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
+	// Convert between event types
 }
 
-func (m *MessengerSource) Stop() {
-	close(m.stopped)
-	m.wg.Wait()
+func (s *MessengerSource) Close() {}
+
+type MessengerSink struct {
+	client *messenger.Client
 }
+
+func NewMessengerSink(client *messenger.Client) *MessengerSink {
+	return &MessengerSink{
+		client: client,
+	}
+}
+
+func (s *MessengerSink) Flush(ev *botengine.Event) error {
+	// ctx := context.Background()
+	// s.client.
+	// 	Send(reply.RecipientID).
+	// 	Message(messenger.RegularNotif).
+	// 	Text(reply.Text).
+	// 	Do(ctx)
+	return nil
+}
+
+func (s *MessengerSink) Close() {}

@@ -7,18 +7,18 @@ import (
 	"time"
 
 	"github.com/devonboyer/airbot/airtable"
-	"github.com/devonboyer/airbot/bot"
+	"github.com/devonboyer/airbot/botengine"
 )
 
 type Bot struct {
-	*bot.Bot
+	*botengine.Engine
 	*airtable.Client
 	baseID, tableID string
 }
 
-func NewBot(secrets *Secrets, source bot.Source) *Bot {
+func NewBot(secrets *Secrets, source botengine.Source, sink botengine.Sink) *Bot {
 	bot := &Bot{
-		bot.New(source),
+		botengine.New(source, sink),
 		airtable.New(secrets.Airtable.APIKey),
 		"appwqWzX94IXnLEp5",
 		"Shows",
@@ -28,7 +28,7 @@ func NewBot(secrets *Secrets, source bot.Source) *Bot {
 }
 
 func (b *Bot) setupHandlers() {
-	b.Handle("shows today", func(s string) (string, error) {
+	b.Handle("shows today", func(usr botengine.User) (string, error) {
 		ctx := context.Background()
 		shows := &ShowList{}
 		formulaFmt := "AND({Day of Week} = '%s', {Status} = 'Airing')"
