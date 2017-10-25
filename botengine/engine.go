@@ -41,14 +41,6 @@ func (w withNumGoroutines) Apply(e *Engine) {
 	e.numGoroutines = int(w)
 }
 
-type Event struct {
-	Type   string
-	Object interface{}
-}
-
-type Message struct {
-}
-
 type Source interface {
 	Events() <-chan *Event
 	Close()
@@ -61,7 +53,7 @@ type Sink interface {
 
 type handler struct {
 	pattern    string
-	handleFunc func(string) (string, error)
+	handleFunc func(User) (string, error)
 }
 
 // Engine provides the brain of a bot by dispatching events to handlers.
@@ -105,7 +97,7 @@ func New(source Source, sink Sink, opts ...Option) *Engine {
 	return eng
 }
 
-func (e *Engine) Handle(pattern string, handleFunc func(string) (string, error)) {
+func (e *Engine) Handle(pattern string, handleFunc func(User) (string, error)) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.handlers = append(e.handlers, &handler{
@@ -135,7 +127,42 @@ func (e *Engine) run() {
 }
 
 func (e *Engine) dispatch(ev *Event) {
-	// Handle event
+	switch ev.Kind {
+	case MessageEvent:
+		msg := ev.Object.(*Message)
+		for _, h := range e.handlers {
+			if h.pattern == msg.Text {
+				reply, err := h.handleFunc(msg.User)
+				if err != nil {
+					e.replyError(msg.User)
+					return
+				}
+				e.flush(msg.User, reply)
+			}
+		}
+		e.replyNotFound(msg.User)
+	default:
+		// Ignore unsupported events.
+	}
+}
+
+func (e *Engine) flush(usr User, text string) {
+	res := &Event{
+		Kind: MessageEvent,
+		Object: &Message{
+			User: usr,
+			Text: text,
+		},
+	}
+	_ = e.sink.Flush(res)
+}
+
+func (e *Engine) replyError(usr User) {
+	e.flush(usr, e.errorReply)
+}
+
+func (e *Engine) replyNotFound(usr User) {
+	e.flush(usr, e.notFoundReply)
 }
 
 func (e *Engine) Stop() {
