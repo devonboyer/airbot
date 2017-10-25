@@ -1,31 +1,37 @@
 package airbot
 
 import (
-	"context"
-
 	"github.com/devonboyer/airbot/botengine"
 	"github.com/devonboyer/airbot/messenger"
 )
 
-type MessengerQueue struct {
-	botengine.Queue
+type MessengerSource struct {
+	eventsChan chan botengine.Event
 }
 
-func (q *MessengerQueue) Push(ctx context.Context, ev botengine.Event) {
-	q.Push(ctx, ev)
-}
-
-func (q *MessengerQueue) Pop(ctx context.Context) botengine.Event {
-	return q.Pop(ctx)
+func (s *MessengerSource) Events() <-chan Event {
+	return s.eventsChan
 }
 
 // Implements messenger.EventHandler interface
-func (q *MessengerQueue) HandleEvent(ev *messenger.WebhookEvent) {
+func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
 	// Convert between event types
 }
 
-func (q *MessengerQueue) Close() {
-	q.Close()
+func (s *MessengerSource) Close() {
+
+}
+
+type MessengerSink struct {
+	client *messenger.Client
+}
+
+func (s *MessengerSource) Flush(ev botengine.Event) {
+
+}
+
+func (s *MessengerSource) Close() {
+
 }
 
 // func (m *MessengerSource) Send(reply bot.Reply) {

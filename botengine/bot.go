@@ -45,6 +45,11 @@ type Sink interface {
 	Close()
 }
 
+type handler struct {
+	pattern    string
+	handleFunc func(string) (string, error)
+}
+
 type Bot struct {
 	source Source
 	sink   Sink
@@ -55,11 +60,6 @@ type Bot struct {
 	handlers []*handler
 	stopped  chan struct{}
 	wg       sync.WaitGroup
-}
-
-type handler struct {
-	pattern    string
-	handleFunc func(string) (string, error)
 }
 
 func New(source Source, sink Sink, opts ...Option) *Bot {
@@ -98,6 +98,19 @@ func (b *Bot) Run() {
 func (b *Bot) run() {
 	b.wg.Add(1)
 	defer b.wg.Done()
+
+	for {
+		select {
+		case ev := <-b.source.Events():
+			b.dispatch(ev)
+		case <-b.stopped:
+			return
+		}
+	}
+}
+
+func (b *Bot) dispatch(ev Event) {
+	// Handle event
 }
 
 func (b *Bot) Stop() {
