@@ -1,10 +1,13 @@
 package botengine
 
-import "testing"
-import "time"
-import "github.com/stretchr/testify/require"
-import "io"
-import "fmt"
+import (
+	"fmt"
+	"io"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
 
 const bufferSize = 1024
 

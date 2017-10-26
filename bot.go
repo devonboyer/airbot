@@ -28,6 +28,7 @@ func NewBot(secrets *Secrets, source botengine.Source, sink botengine.Sink) *Bot
 }
 
 func (b *Bot) setupHandlers() {
+	// Responds with a list of shows that are airing tonight
 	b.Handle("shows today", func(w io.Writer, ev *botengine.Event) {
 		ctx := context.Background()
 		shows := &ShowList{}
