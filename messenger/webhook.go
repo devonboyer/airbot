@@ -53,9 +53,15 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			evh.HandleEvent(ev)
 
-			w.WriteHeader(http.StatusOK)
+			// Check the webhook event is from a Page subscription
+			switch ev.Object {
+			case "page":
+				evh.HandleEvent(ev)
+				w.WriteHeader(http.StatusOK)
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}

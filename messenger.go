@@ -25,23 +25,17 @@ func (s *MessengerSource) Events() <-chan *botengine.Event {
 
 // HandleEvent implements messenger.EventHandler interface
 func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
-	switch ev.Object {
-	case "page":
-		for _, entry := range ev.Entries {
-			for _, obj := range entry.Messaging {
-				switch v := obj.(type) {
-				case *messenger.MessageEvent:
-					s.eventsChan <- &botengine.Event{
-						Type: botengine.MessageEvent,
-						Object: &botengine.Message{
-							User: botengine.User{ID: v.Sender.ID},
-							Text: v.Message.Text,
-						},
-					}
-				}
+	for _, entry := range ev.Entries {
+		switch msg := entry.Messaging[0].(type) {
+		case *messenger.MessageEvent:
+			s.eventsChan <- &botengine.Event{
+				Type: botengine.MessageEvent,
+				Object: &botengine.Message{
+					User: botengine.User{ID: msg.Sender.ID},
+					Text: msg.Message.Text,
+				},
 			}
 		}
-	default:
 	}
 }
 
