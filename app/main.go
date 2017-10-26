@@ -56,29 +56,25 @@ func main() {
 	}
 	logger.Info("Decrypted secrets")
 
-	if env == "development" {
-		menu.Run(nil)
-	} else {
-		// Get messenger client
-		client := messenger.New(
-			secrets.Messenger.AccessToken,
-			secrets.Messenger.VerifyToken,
-			secrets.Messenger.AppSecret,
-			messenger.WithLogger(logger),
-		)
+	// Get messenger client
+	client := messenger.New(
+		secrets.Messenger.AccessToken,
+		secrets.Messenger.VerifyToken,
+		secrets.Messenger.AppSecret,
+		messenger.WithLogger(logger),
+	)
 
-		source := airbot.NewMessengerSource()
-		sink := airbot.NewMessengerSink(client)
+	source := airbot.NewMessengerSource()
+	sink := airbot.NewMessengerSink(client)
 
-		// Run bot
-		bot := airbot.NewBot(secrets, source, sink)
-		bot.Run()
-		defer bot.Stop()
+	// Run bot
+	bot := airbot.NewBot(secrets, source, sink)
+	bot.Run()
+	defer bot.Stop()
 
-		setupRoutes(client, source)
+	setupRoutes(client, source)
 
-		appengine.Main()
-	}
+	appengine.Main()
 }
 
 func setupRoutes(client *messenger.Client, evh messenger.EventHandler) {
