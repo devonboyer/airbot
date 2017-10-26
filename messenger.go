@@ -1,6 +1,8 @@
 package airbot
 
 import (
+	"context"
+
 	"github.com/devonboyer/airbot/botengine"
 	"github.com/devonboyer/airbot/messenger"
 )
@@ -21,9 +23,26 @@ func (s *MessengerSource) Events() <-chan *botengine.Event {
 	return s.eventsChan
 }
 
-// Implements messenger.EventHandler interface
+// HandleEvent implements messenger.EventHandler interface
 func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
-	// Convert between event types
+	switch ev.Object {
+	case "page":
+		for _, entry := range ev.Entries {
+			for _, obj := range entry.Messaging {
+				switch v := obj.(type) {
+				case *messenger.MessageEvent:
+					s.eventsChan <- &botengine.Event{
+						Type: botengine.MessageEvent,
+						Object: &botengine.Message{
+							User: botengine.User{ID: v.Sender.ID},
+							Text: v.Message.Text,
+						},
+					}
+				}
+			}
+		}
+	default:
+	}
 }
 
 func (s *MessengerSource) Close() {}
@@ -39,12 +58,17 @@ func NewMessengerSink(client *messenger.Client) *MessengerSink {
 }
 
 func (s *MessengerSink) Flush(ev *botengine.Event) error {
-	// ctx := context.Background()
-	// s.client.
-	// 	Send(reply.RecipientID).
-	// 	Message(messenger.RegularNotif).
-	// 	Text(reply.Text).
-	// 	Do(ctx)
+	switch ev.Type {
+	case botengine.MessageEvent:
+		msg := ev.Object.(*botengine.Message)
+		ctx := context.Background()
+		return s.client.
+			Send(msg.User.ID).
+			Message(messenger.RegularNotif).
+			Text(msg.Text).
+			Do(ctx)
+	default:
+	}
 	return nil
 }
 
