@@ -1,9 +1,9 @@
 package airbot
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/devonboyer/airbot/airtable"
@@ -28,7 +28,7 @@ func NewBot(secrets *Secrets, source botengine.Source, sink botengine.Sink) *Bot
 }
 
 func (b *Bot) setupHandlers() {
-	b.Handle("shows today", func(usr botengine.User) (string, error) {
+	b.Handle("shows today", func(w io.Writer, ev *botengine.Event) {
 		ctx := context.Background()
 		shows := &ShowList{}
 		formulaFmt := "AND({Day of Week} = '%s', {Status} = 'Airing')"
@@ -38,17 +38,12 @@ func (b *Bot) setupHandlers() {
 			FilterByFormula(fmt.Sprintf(formulaFmt, time.Now().Weekday())).
 			Do(ctx, shows)
 		if err != nil {
-			return "", err
+			fmt.Fprint(w, err)
+		} else {
+			fmt.Fprintln(w, "Shows on tonight:")
+			for _, s := range shows.Records {
+				fmt.Fprintln(w, s.Fields.Name)
+			}
 		}
-		return processShows(shows), nil
 	})
-}
-
-func processShows(shows *ShowList) string {
-	buf := &bytes.Buffer{}
-	fmt.Fprintln(buf, "Shows on tonight:")
-	for _, s := range shows.Records {
-		fmt.Fprintln(buf, s.Fields.Name)
-	}
-	return buf.String()
 }
