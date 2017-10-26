@@ -28,8 +28,6 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 			}
 			w.WriteHeader(http.StatusUnauthorized)
 		case "POST":
-			c.logger.Printf("messenger: received webhook event")
-
 			// Handle event.
 			defer req.Body.Close()
 
@@ -39,6 +37,8 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+
+			c.logger.Printf("messenger: received webhook event: %s", string(body))
 
 			// Validate event.
 			if !verifySignature(c.appSecret, body, req.Header.Get("X-Hub-Signature")[5:]) {
