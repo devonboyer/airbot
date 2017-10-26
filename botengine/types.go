@@ -1,9 +1,11 @@
 package botengine
 
-const MessageEvent = "message"
+type EventType string
+
+const MessageEvent EventType = "message"
 
 type Event struct {
-	Kind   string
+	Type   EventType
 	Object interface{}
 }
 

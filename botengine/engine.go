@@ -1,11 +1,12 @@
 package botengine
 
-import "sync"
-
-const (
-	defaultNotFoundReply = "I don't understand 🤷"
-	defaultErrorReply    = "Something went wrong"
+import (
+	"bytes"
+	"io"
+	"sync"
 )
+
+const defaultNotFoundReply = "I don't understand 🤷"
 
 type Option interface {
 	Apply(*Engine)
@@ -19,16 +20,6 @@ type withNotFoundReply string
 
 func (w withNotFoundReply) Apply(b *Engine) {
 	b.notFoundReply = string(w)
-}
-
-func WithErrorReply(s string) Option {
-	return withErrorReply(s)
-}
-
-type withErrorReply string
-
-func (w withErrorReply) Apply(b *Engine) {
-	b.errorReply = string(w)
 }
 
 func WithNumGoroutines(n int) Option {
@@ -53,7 +44,7 @@ type Sink interface {
 
 type handler struct {
 	pattern    string
-	handleFunc func(User) (string, error)
+	handleFunc func(io.Writer, *Event)
 }
 
 // Engine provides the brain of a bot by dispatching events to handlers.
@@ -67,7 +58,6 @@ type Engine struct {
 
 	// options
 	notFoundReply string
-	errorReply    string
 	numGoroutines int
 
 	mu       sync.Mutex
@@ -80,7 +70,6 @@ func New(source Source, sink Sink, opts ...Option) *Engine {
 	o := []Option{
 		WithNumGoroutines(1),
 		WithNotFoundReply(defaultNotFoundReply),
-		WithErrorReply(defaultErrorReply),
 	}
 	opts = append(o, opts...)
 	eng := &Engine{
@@ -97,7 +86,7 @@ func New(source Source, sink Sink, opts ...Option) *Engine {
 	return eng
 }
 
-func (e *Engine) Handle(pattern string, handleFunc func(User) (string, error)) {
+func (e *Engine) Handle(pattern string, handleFunc func(io.Writer, *Event)) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.handlers = append(e.handlers, &handler{
@@ -127,17 +116,17 @@ func (e *Engine) run() {
 }
 
 func (e *Engine) dispatch(ev *Event) {
-	switch ev.Kind {
+	switch ev.Type {
 	case MessageEvent:
 		msg := ev.Object.(*Message)
 		for _, h := range e.handlers {
 			if h.pattern == msg.Text {
-				reply, err := h.handleFunc(msg.User)
-				if err != nil {
-					e.replyError(msg.User)
-					return
+				buf := &bytes.Buffer{}
+				h.handleFunc(buf, ev)
+				if reply := buf.String(); reply != "" {
+					e.flush(msg.User, reply)
 				}
-				e.flush(msg.User, reply)
+				return
 			}
 		}
 		e.replyNotFound(msg.User)
@@ -148,17 +137,13 @@ func (e *Engine) dispatch(ev *Event) {
 
 func (e *Engine) flush(usr User, text string) {
 	res := &Event{
-		Kind: MessageEvent,
+		Type: MessageEvent,
 		Object: &Message{
 			User: usr,
 			Text: text,
 		},
 	}
 	_ = e.sink.Flush(res)
-}
-
-func (e *Engine) replyError(usr User) {
-	e.flush(usr, e.errorReply)
 }
 
 func (e *Engine) replyNotFound(usr User) {
