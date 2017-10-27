@@ -8,6 +8,7 @@ import (
 
 	"github.com/devonboyer/airbot/airtable"
 	"github.com/devonboyer/airbot/botengine"
+	"github.com/sirupsen/logrus"
 )
 
 type Bot struct {
@@ -30,6 +31,9 @@ func NewBot(client *airtable.Client, source botengine.Source, sink botengine.Sin
 func (b *Bot) setupHandlers() {
 	// Responds with a list of shows that are airing tonight
 	b.Handle("shows today", func(w io.Writer, ev *botengine.Event) {
+
+		logrus.WithField("cmd", "shows today").Info("handler called")
+
 		ctx := context.Background()
 		shows := &ShowList{}
 		formulaFmt := "AND({Day of Week} = '%s', {Status} = 'Airing')"

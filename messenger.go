@@ -3,6 +3,8 @@ package airbot
 import (
 	"context"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/devonboyer/airbot/botengine"
 	"github.com/devonboyer/airbot/messenger"
 )
@@ -28,6 +30,12 @@ func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
 	for _, entry := range ev.Entries {
 		switch msg := entry.Messaging[0].(type) {
 		case *messenger.MessageEvent:
+
+			logrus.WithFields(logrus.Fields{
+				"psid": msg.Sender.ID,
+				"text": msg.Message.Text,
+			}).Info("received message event")
+
 			s.eventsChan <- &botengine.Event{
 				Type: botengine.MessageEvent,
 				Object: &botengine.Message{
@@ -46,21 +54,28 @@ type MessengerSink struct {
 }
 
 func NewMessengerSink(client *messenger.Client) *MessengerSink {
-	return &MessengerSink{
-		client: client,
-	}
+	return &MessengerSink{client: client}
 }
 
 func (s *MessengerSink) Flush(ev *botengine.Event) error {
 	switch ev.Type {
 	case botengine.MessageEvent:
 		msg := ev.Object.(*botengine.Message)
+		logentry := logrus.WithFields(logrus.Fields{
+			"psid": msg.User.ID,
+			"text": msg.Text,
+		})
 		ctx := context.Background()
-		return s.client.
+		err := s.client.
 			Send(msg.User.ID).
 			Message(messenger.RegularNotif).
 			Text(msg.Text).
 			Do(ctx)
+		if err != nil {
+			logentry.WithError(err).Error("Failed to send message")
+			return err
+		}
+		logentry.Info("Sent message")
 	default:
 	}
 	return nil

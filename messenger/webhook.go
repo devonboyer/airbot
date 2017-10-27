@@ -38,8 +38,6 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 				return
 			}
 
-			c.logger.Printf("messenger: received webhook event: %s", string(body))
-
 			// Validate event.
 			if !verifySignature(c.appSecret, body, req.Header.Get("X-Hub-Signature")[5:]) {
 				c.logger.Printf("messenger: invalid request signature")
@@ -53,6 +51,8 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+
+			c.logger.Printf("messenger: received webhook event: %v", ev)
 
 			// Check the webhook event is from a Page subscription
 			switch ev.Object {
