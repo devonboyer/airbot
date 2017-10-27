@@ -16,10 +16,10 @@ type Bot struct {
 	baseID, tableID string
 }
 
-func NewBot(secrets *Secrets, source botengine.Source, sink botengine.Sink) *Bot {
+func NewBot(client *airtable.Client, source botengine.Source, sink botengine.Sink) *Bot {
 	bot := &Bot{
 		botengine.New(source, sink),
-		airtable.New(secrets.Airtable.APIKey),
+		client,
 		"appwqWzX94IXnLEp5",
 		"Shows",
 	}
