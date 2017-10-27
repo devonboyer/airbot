@@ -9,30 +9,6 @@ import (
 
 const defaultNotFoundReply = "I don't understand 🤷"
 
-type Option interface {
-	Apply(*Engine)
-}
-
-func WithNotFoundReply(s string) Option {
-	return withNotFoundReply(s)
-}
-
-type withNotFoundReply string
-
-func (w withNotFoundReply) Apply(b *Engine) {
-	b.notFoundReply = string(w)
-}
-
-func WithNumGoroutines(n int) Option {
-	return withNumGoroutines(n)
-}
-
-type withNumGoroutines int
-
-func (w withNumGoroutines) Apply(e *Engine) {
-	e.numGoroutines = int(w)
-}
-
 type Source interface {
 	Events() <-chan *Event
 	Close()
@@ -48,6 +24,18 @@ type handler struct {
 	handleFunc func(io.Writer, *Event)
 }
 
+type Settings struct {
+	NumGoroutines int
+	NotFoundReply string
+	Echo          bool
+}
+
+var DefaultSettings = Settings{
+	NumGoroutines: 1,
+	NotFoundReply: defaultNotFoundReply,
+	Echo:          false,
+}
+
 // Engine provides the brain of a bot by dispatching events to handlers.
 //
 // type Bot struct {
@@ -57,10 +45,10 @@ type Engine struct {
 	source Source
 	sink   Sink
 
-	// options
+	// settings
 	notFoundReply string
 	numGoroutines int
-	echo          bool // echo messages
+	echo          bool
 
 	mu       sync.Mutex
 	handlers []*handler
@@ -68,25 +56,18 @@ type Engine struct {
 	wg       sync.WaitGroup
 }
 
-func New(source Source, sink Sink, opts ...Option) *Engine {
-	o := []Option{
-		WithNumGoroutines(1),
-		WithNotFoundReply(defaultNotFoundReply),
+func New(source Source, sink Sink, settings Settings) *Engine {
+	return &Engine{
+		source:        source,
+		sink:          sink,
+		notFoundReply: settings.NotFoundReply,
+		numGoroutines: settings.NumGoroutines,
+		echo:          settings.Echo,
+		mu:            sync.Mutex{},
+		handlers:      make([]*handler, 0),
+		stopped:       make(chan struct{}),
+		wg:            sync.WaitGroup{},
 	}
-	opts = append(o, opts...)
-	eng := &Engine{
-		source:   source,
-		sink:     sink,
-		echo:     true,
-		mu:       sync.Mutex{},
-		handlers: make([]*handler, 0),
-		stopped:  make(chan struct{}),
-		wg:       sync.WaitGroup{},
-	}
-	for _, opt := range opts {
-		opt.Apply(eng)
-	}
-	return eng
 }
 
 func (e *Engine) Handle(pattern string, handleFunc func(io.Writer, *Event)) {

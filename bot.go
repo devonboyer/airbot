@@ -19,7 +19,7 @@ type Bot struct {
 
 func NewBot(client *airtable.Client, source botengine.Source, sink botengine.Sink) *Bot {
 	bot := &Bot{
-		botengine.New(source, sink),
+		botengine.New(source, sink, botengine.DefaultSettings),
 		client,
 		"appwqWzX94IXnLEp5",
 		"Shows",
