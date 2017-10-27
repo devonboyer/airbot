@@ -9,18 +9,39 @@ import (
 
 const majorAPIVersion = "0"
 
+type ClientOption interface {
+	Apply(*Client)
+}
+
+func WithHTTPClient(client *http.Client) ClientOption {
+	return withHTTPClient{client}
+}
+
+type withHTTPClient struct{ client *http.Client }
+
+func (w withHTTPClient) Apply(c *Client) {
+	c.hc = w.client
+}
+
 type Client struct {
 	apiKey   string
 	basePath string
 	hc       *http.Client
 }
 
-func New(apiKey string) *Client {
-	return &Client{
+func New(apiKey string, opts ...ClientOption) *Client {
+	o := []ClientOption{
+		WithHTTPClient(http.DefaultClient),
+	}
+	opts = append(o, opts...)
+	client := &Client{
 		apiKey:   apiKey,
 		basePath: fmt.Sprintf("https://api.airtable.com/v%s", majorAPIVersion),
-		hc:       http.DefaultClient,
 	}
+	for _, opt := range opts {
+		opt.Apply(client)
+	}
+	return client
 }
 
 var xVersionHeader = fmt.Sprintf("%s.1.0", majorAPIVersion)

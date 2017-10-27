@@ -2,6 +2,7 @@ package botengine
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"sync"
 )
@@ -59,6 +60,7 @@ type Engine struct {
 	// options
 	notFoundReply string
 	numGoroutines int
+	echo          bool // echo messages
 
 	mu       sync.Mutex
 	handlers []*handler
@@ -75,6 +77,7 @@ func New(source Source, sink Sink, opts ...Option) *Engine {
 	eng := &Engine{
 		source:   source,
 		sink:     sink,
+		echo:     true,
 		mu:       sync.Mutex{},
 		handlers: make([]*handler, 0),
 		stopped:  make(chan struct{}),
@@ -120,13 +123,17 @@ func (e *Engine) dispatch(ev *Event) {
 	case MessageEvent:
 		msg := ev.Object.(*Message)
 		for _, h := range e.handlers {
+			buf := &bytes.Buffer{}
 			if h.pattern == msg.Text {
-				buf := &bytes.Buffer{}
 				h.handleFunc(buf, ev)
 				if reply := buf.String(); reply != "" {
 					e.flush(msg.User, reply)
 				}
 				return
+			}
+			if e.echo {
+				fmt.Fprintf(buf, "You sent the message \"%s\".", msg.Text)
+				e.flush(msg.User, buf.String())
 			}
 		}
 		e.replyNotFound(msg.User)

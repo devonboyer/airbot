@@ -4,8 +4,10 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/devonboyer/airbot"
+	"github.com/devonboyer/airbot/airtable"
 	"github.com/devonboyer/airbot/messenger"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/appengine"
@@ -56,23 +58,34 @@ func main() {
 	}
 	logger.Info("Decrypted secrets")
 
+	hc := &http.Client{
+		Timeout: 1 * time.Minute,
+	}
+
 	// Get messenger client
-	client := messenger.New(
+	messengerClient := messenger.New(
 		secrets.Messenger.AccessToken,
 		secrets.Messenger.VerifyToken,
 		secrets.Messenger.AppSecret,
 		messenger.WithLogger(logger),
+		messenger.WithHTTPClient(hc),
+	)
+
+	// Get airtable client
+	airtableClient := airtable.New(
+		secrets.Airtable.APIKey,
+		airtable.WithHTTPClient(hc),
 	)
 
 	source := airbot.NewMessengerSource()
-	sink := airbot.NewMessengerSink(client)
+	sink := airbot.NewMessengerSink(messengerClient)
 
 	// Run bot
-	bot := airbot.NewBot(secrets, source, sink)
+	bot := airbot.NewBot(airtableClient, source, sink)
 	bot.Run()
 	defer bot.Stop()
 
-	setupRoutes(client, source)
+	setupRoutes(messengerClient, source)
 
 	appengine.Main()
 }
