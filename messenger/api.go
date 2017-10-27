@@ -78,7 +78,7 @@ func (c *Client) doRequest(ctx context.Context, v interface{}) (*http.Response, 
 	if err != nil {
 		return nil, err
 	}
-	url := fmt.Sprintf("%s/messages", c.basePath) + fmt.Sprintf("?accessToken=%s", c.accessToken)
+	url := fmt.Sprintf("%s/messages", c.basePath) + fmt.Sprintf("?access_token=%s", c.accessToken)
 	req, _ := http.NewRequest("POST", url, buf)
 	setContentType(req.Header, "application/json")
 	if ctx == nil {

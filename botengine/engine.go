@@ -134,6 +134,7 @@ func (e *Engine) dispatch(ev *Event) {
 			if e.echo {
 				fmt.Fprintf(buf, "You sent the message \"%s\".", msg.Text)
 				e.flush(msg.User, buf.String())
+				return
 			}
 		}
 		e.replyNotFound(msg.User)
