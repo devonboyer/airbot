@@ -34,9 +34,12 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 			// Read body
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
+				c.logger.Printf("messenger: could not ready body")
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+
+			c.logger.Printf("messenger: received webhook event: %v", string(body))
 
 			// Validate event.
 			if !verifySignature(c.appSecret, body, req.Header.Get("X-Hub-Signature")[5:]) {
@@ -48,11 +51,10 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 			var ev = &WebhookEvent{}
 			err = json.NewDecoder(req.Body).Decode(ev)
 			if err != nil {
+				c.logger.Printf("messenger: could not unmarshal event")
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-
-			c.logger.Printf("messenger: received webhook event: %v", ev)
 
 			// Check the webhook event is from a Page subscription
 			switch ev.Object {
