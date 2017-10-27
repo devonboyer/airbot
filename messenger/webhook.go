@@ -49,9 +49,8 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 			}
 
 			var ev = &WebhookEvent{}
-			err = json.NewDecoder(req.Body).Decode(ev)
-			if err != nil {
-				c.logger.Printf("messenger: could not unmarshal event")
+			if err := json.Unmarshal(body, ev); err != nil {
+				c.logger.Printf("messenger: could not unmarshal event: %v", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

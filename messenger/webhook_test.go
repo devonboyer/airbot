@@ -38,7 +38,7 @@ func Test_WebhookHandler(t *testing.T) {
 			handler := http.HandlerFunc(client.WebhookHandler(nopEventHandler{}))
 			handler.ServeHTTP(rr, req)
 
-			require.Equal(t, rr.Code, http.StatusOK)
+			require.Equal(t, http.StatusOK, rr.Code)
 		})
 	}
 }

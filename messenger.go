@@ -28,19 +28,18 @@ func (s *MessengerSource) Events() <-chan *botengine.Event {
 // HandleEvent implements messenger.EventHandler interface
 func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
 	for _, entry := range ev.Entries {
-		switch msg := entry.Messaging[0].(type) {
-		case *messenger.MessageEvent:
-
+		callback := entry.Messaging[0]
+		if callback.Message != nil {
 			logrus.WithFields(logrus.Fields{
-				"psid": msg.Sender.ID,
-				"text": msg.Message.Text,
+				"psid": callback.Sender.ID,
+				"text": callback.Message.Text,
 			}).Info("received message event")
 
 			s.eventsChan <- &botengine.Event{
 				Type: botengine.MessageEvent,
 				Object: &botengine.Message{
-					User: botengine.User{ID: msg.Sender.ID},
-					Text: msg.Message.Text,
+					User: botengine.User{ID: callback.Sender.ID},
+					Text: callback.Message.Text,
 				},
 			}
 		}

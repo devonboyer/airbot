@@ -22,22 +22,23 @@ type SenderActionMarshaler struct {
 type WebhookEvent struct {
 	Object  string `json:"object"`
 	Entries []struct {
-		PageID    int64         `json:"id"`
-		Time      int64         `json:"time"`
-		Messaging []interface{} `json:"messaging"` // can't do this
+		PageID    string     `json:"id"`
+		Time      int64      `json:"time"`
+		Messaging []Callback `json:"messaging"`
 	} `json:"entry"`
 }
 
-type MessageEvent struct {
+type Callback struct {
 	Sender struct {
 		ID string `json:"id"`
 	} `json:"sender"`
 	Recipient struct {
 		ID string `json:"id"`
 	} `json:"recipient"`
-	Timestamp int `json:"timestamp,omitempty"`
-	Message   struct {
+	Timestamp int64 `json:"timestamp"`
+	Message   *struct {
 		MID  string `json:"mid"`
+		Seq  int64  `json:"seq"`
 		Text string `json:"text,omitempty"`
-	} `json:"message"`
+	} `json:"message,omitempty"`
 }
