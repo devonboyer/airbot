@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path"
 
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -79,7 +78,7 @@ func (c *Client) doRequest(ctx context.Context, v interface{}) (*http.Response, 
 	if err != nil {
 		return nil, err
 	}
-	url := path.Join(c.basePath, "messages") + fmt.Sprintf("?accessToken=%s", c.accessToken)
+	url := fmt.Sprintf("%s/messages", c.basePath) + fmt.Sprintf("?accessToken=%s", c.accessToken)
 	req, _ := http.NewRequest("POST", url, buf)
 	setContentType(req.Header, "application/json")
 	if ctx == nil {
