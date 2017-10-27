@@ -36,7 +36,7 @@ func (c *showsController) todayHandler() func(w io.Writer, ev *botengine.Event) 
 		if err != nil {
 			fmt.Fprint(w, err)
 		} else {
-			if len(shows.Records) == 0 {
+			if len(shows.Records) > 0 {
 				fmt.Fprintf(w, "Shows on today:\n%s", shows)
 			} else {
 				fmt.Fprintf(w, "No shows on today")
@@ -55,7 +55,7 @@ func (c *showsController) tomorrowHandler() func(w io.Writer, ev *botengine.Even
 		if err != nil {
 			fmt.Fprint(w, err)
 		} else {
-			if len(shows.Records) == 0 {
+			if len(shows.Records) > 0 {
 				fmt.Fprintf(w, "Shows on tomorrow:\n%s", shows)
 			} else {
 				fmt.Fprintf(w, "No shows on tomorrow")
