@@ -16,8 +16,9 @@ type MessengerSource struct {
 	eventsChan chan *botengine.Event
 }
 
-func NewMessengerSource() *MessengerSource {
+func NewMessengerSource(client *messenger.Client) *MessengerSource {
 	return &MessengerSource{
+		client:     client,
 		eventsChan: make(chan *botengine.Event, bufferSize),
 	}
 }

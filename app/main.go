@@ -77,7 +77,7 @@ func main() {
 		airtable.WithHTTPClient(hc),
 	)
 
-	source := airbot.NewMessengerSource()
+	source := airbot.NewMessengerSource(messengerClient)
 	sink := airbot.NewMessengerSink(messengerClient)
 
 	// Run bot
