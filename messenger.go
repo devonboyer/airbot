@@ -12,6 +12,7 @@ import (
 const bufferSize = 1024
 
 type MessengerSource struct {
+	client     *messenger.Client
 	eventsChan chan *botengine.Event
 }
 
@@ -30,10 +31,18 @@ func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
 	for _, entry := range ev.Entries {
 		callback := entry.Messaging[0]
 		if callback.Message != nil {
-			logrus.WithFields(logrus.Fields{
+			logentry := logrus.WithFields(logrus.Fields{
 				"psid": callback.Sender.ID,
 				"text": callback.Message.Text,
-			}).Info("received message event")
+			})
+
+			logentry.Info("received message event")
+
+			ctx := context.Background()
+			err := s.client.MarkSeen(ctx, callback.Sender.ID)
+			if err != nil {
+				logentry.WithError(err).Error("could not mark seen")
+			}
 
 			s.eventsChan <- &botengine.Event{
 				Type: botengine.MessageEvent,
