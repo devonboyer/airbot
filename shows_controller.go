@@ -31,12 +31,16 @@ func (c *showsController) todayHandler() func(w io.Writer, ev *botengine.Event) 
 		logrus.WithField("pattern", "shows today").Info("handler called")
 
 		ctx := context.Background()
-		day := time.Now().Add(24 * time.Hour).Weekday()
+		day := time.Now().Weekday()
 		shows, err := c.listShows(ctx, fmt.Sprintf(showsFormulaFmt, day))
 		if err != nil {
 			fmt.Fprint(w, err)
 		} else {
-			fmt.Fprintf(w, "Shows on today:\n%s", shows)
+			if len(shows.Records) == 0 {
+				fmt.Fprintf(w, "Shows on today:\n%s", shows)
+			} else {
+				fmt.Fprintf(w, "No shows on today")
+			}
 		}
 	}
 }
@@ -46,12 +50,16 @@ func (c *showsController) tomorrowHandler() func(w io.Writer, ev *botengine.Even
 		logrus.WithField("pattern", "shows tomorrow").Info("handler called")
 
 		ctx := context.Background()
-		day := time.Now().Weekday()
+		day := time.Now().Add(24 * time.Hour).Weekday()
 		shows, err := c.listShows(ctx, fmt.Sprintf(showsFormulaFmt, day))
 		if err != nil {
 			fmt.Fprint(w, err)
 		} else {
-			fmt.Fprintf(w, "Shows on tomorrow:\n%s", shows)
+			if len(shows.Records) == 0 {
+				fmt.Fprintf(w, "Shows on tomorrow:\n%s", shows)
+			} else {
+				fmt.Fprintf(w, "No shows on tomorrow")
+			}
 		}
 	}
 }

@@ -28,7 +28,7 @@ type ShowList struct {
 	Offset  string `json:"offset"`
 }
 
-func (sl ShowList) String() string {
+func (sl *ShowList) String() string {
 	buf := &bytes.Buffer{}
 	for _, s := range sl.Records {
 		fmt.Fprintln(buf, s.Fields.Name)
