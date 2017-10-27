@@ -24,7 +24,7 @@ type WebhookEvent struct {
 	Entries []struct {
 		PageID    int64         `json:"id"`
 		Time      int64         `json:"time"`
-		Messaging []interface{} `json:"messaging"`
+		Messaging []interface{} `json:"messaging"` // can't do this
 	} `json:"entry"`
 }
 

@@ -41,8 +41,8 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 
 			c.logger.Printf("messenger: received webhook event: %v", string(body))
 
-			// Validate event.
-			if !verifySignature(c.appSecret, body, req.Header.Get("X-Hub-Signature")[5:]) {
+			// Verify event signature.
+			if !c.skipVerify && !verifySignature(c.appSecret, body, req.Header.Get("X-Hub-Signature")[5:]) {
 				c.logger.Printf("messenger: invalid request signature")
 				w.WriteHeader(http.StatusUnauthorized)
 				return

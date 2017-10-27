@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTableListCall(t *testing.T) {
+func Test_TableListCall(t *testing.T) {
 	var tests = []struct {
 		desc string
 		call *TableListCall

@@ -36,7 +36,7 @@ func (m *mockSink) Flush(ev *Event) error {
 
 func (m *mockSink) Close() {}
 
-func TestEngine(t *testing.T) {
+func Test_Engine(t *testing.T) {
 	source := newMockSource()
 	sink := newMockSink()
 	e := New(source, sink)

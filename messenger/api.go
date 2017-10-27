@@ -52,6 +52,7 @@ type Client struct {
 	basePath    string
 	hc          *http.Client
 	logger      logger
+	skipVerify  bool
 }
 
 func New(accessToken, verifyToken, appSecret string, opts ...ClientOption) *Client {
