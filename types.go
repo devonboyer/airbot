@@ -1,6 +1,10 @@
 package airbot
 
-import "time"
+import (
+	"bytes"
+	"fmt"
+	"time"
+)
 
 type Show struct {
 	ID          string    `json:"id"`
@@ -22,4 +26,12 @@ type Fields struct {
 type ShowList struct {
 	Records []Show `json:"records"`
 	Offset  string `json:"offset"`
+}
+
+func (sl ShowList) String() string {
+	buf := &bytes.Buffer{}
+	for _, s := range sl.Records {
+		fmt.Fprintln(buf, s.Fields.Name)
+	}
+	return buf.String()
 }

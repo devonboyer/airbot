@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 )
 
@@ -20,6 +21,7 @@ type Sink interface {
 }
 
 type handler struct {
+	// pattern is not case-sensitive
 	pattern    string
 	handleFunc func(io.Writer, *Event)
 }
@@ -74,7 +76,7 @@ func (e *Engine) Handle(pattern string, handleFunc func(io.Writer, *Event)) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.handlers = append(e.handlers, &handler{
-		pattern:    pattern,
+		pattern:    strings.ToLower(pattern),
 		handleFunc: handleFunc,
 	})
 }
@@ -105,7 +107,7 @@ func (e *Engine) dispatch(ev *Event) {
 		msg := ev.Object.(*Message)
 		for _, h := range e.handlers {
 			buf := &bytes.Buffer{}
-			if h.pattern == msg.Text {
+			if h.pattern == strings.ToLower(msg.Text) {
 				h.handleFunc(buf, ev)
 				if reply := buf.String(); reply != "" {
 					e.flush(msg.User, reply)
