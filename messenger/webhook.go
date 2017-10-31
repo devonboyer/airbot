@@ -11,7 +11,7 @@ import (
 
 type EventHandler interface {
 	// HandleEvent may be called from multiple goroutines. Note that no effort is made to buffer events.
-	HandleEvent(*WebhookEvent)
+	HandleEvent(*Event)
 }
 
 func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
@@ -48,7 +48,7 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 				return
 			}
 
-			var ev = &WebhookEvent{}
+			var ev = &Event{}
 			if err := json.Unmarshal(body, ev); err != nil {
 				c.logger.Printf("messenger: could not unmarshal event: %v", err)
 				w.WriteHeader(http.StatusInternalServerError)

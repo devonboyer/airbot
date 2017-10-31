@@ -19,7 +19,7 @@ type SenderActionMarshaler struct {
 	Action    string    `json:"sender_action"`
 }
 
-type WebhookEvent struct {
+type Event struct {
 	Object  string `json:"object"`
 	Entries []struct {
 		PageID    string     `json:"id"`

@@ -28,7 +28,7 @@ func (s *MessengerSource) Events() <-chan *botengine.Event {
 }
 
 // HandleEvent implements messenger.EventHandler interface
-func (s *MessengerSource) HandleEvent(ev *messenger.WebhookEvent) {
+func (s *MessengerSource) HandleEvent(ev *messenger.Event) {
 	for _, entry := range ev.Entries {
 		callback := entry.Messaging[0]
 		if callback.Message != nil {

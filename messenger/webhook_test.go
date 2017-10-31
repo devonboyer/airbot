@@ -11,7 +11,7 @@ import (
 
 type nopEventHandler struct{}
 
-func (n nopEventHandler) HandleEvent(_ *WebhookEvent) {}
+func (n nopEventHandler) HandleEvent(_ *Event) {}
 
 func Test_WebhookHandler(t *testing.T) {
 	client := &Client{logger: nopLogger, skipVerify: true}
