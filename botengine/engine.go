@@ -20,10 +20,19 @@ type Sink interface {
 	Close()
 }
 
-type handler struct {
-	// pattern is not case-sensitive
-	pattern    string
-	handleFunc func(io.Writer, *Event)
+type Handler interface {
+	Handle(io.Writer, *Event)
+}
+
+type HandlerFunc func(io.Writer, *Event)
+
+func (f HandlerFunc) Handle(w io.Writer, ev *Event) {
+	f(w, ev)
+}
+
+type handlerEntry struct {
+	pattern string // pattern is not case-sensitive
+	handler Handler
 }
 
 type Settings struct {
@@ -53,7 +62,7 @@ type Engine struct {
 	echo          bool
 
 	mu       sync.Mutex
-	handlers []*handler
+	handlers []*handlerEntry
 	stopped  chan struct{}
 	wg       sync.WaitGroup
 }
@@ -66,19 +75,23 @@ func New(source Source, sink Sink, settings Settings) *Engine {
 		numGoroutines: settings.NumGoroutines,
 		echo:          settings.Echo,
 		mu:            sync.Mutex{},
-		handlers:      make([]*handler, 0),
+		handlers:      make([]*handlerEntry, 0),
 		stopped:       make(chan struct{}),
 		wg:            sync.WaitGroup{},
 	}
 }
 
-func (e *Engine) Handle(pattern string, handleFunc func(io.Writer, *Event)) {
+func (e *Engine) Handle(pattern string, handler Handler) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.handlers = append(e.handlers, &handler{
-		pattern:    strings.ToLower(pattern),
-		handleFunc: handleFunc,
+	e.handlers = append(e.handlers, &handlerEntry{
+		pattern: strings.ToLower(pattern),
+		handler: handler,
 	})
+}
+
+func (e *Engine) HandleFunc(pattern string, handler func(io.Writer, *Event)) {
+	e.Handle(pattern, HandlerFunc(handler))
 }
 
 func (e *Engine) Run() {
@@ -108,7 +121,7 @@ func (e *Engine) dispatch(ev *Event) {
 		for _, h := range e.handlers {
 			buf := &bytes.Buffer{}
 			if h.pattern == strings.ToLower(msg.Text) {
-				h.handleFunc(buf, ev)
+				h.handler.Handle(buf, ev)
 				if reply := buf.String(); reply != "" {
 					e.flush(msg.User, reply)
 				}
