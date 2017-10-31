@@ -38,13 +38,13 @@ type handlerEntry struct {
 type Settings struct {
 	NumGoroutines int
 	NotFoundReply string
-	Echo          bool
+	ShouldEcho    bool
 }
 
 var DefaultSettings = Settings{
 	NumGoroutines: 1,
 	NotFoundReply: defaultNotFoundReply,
-	Echo:          false,
+	ShouldEcho:    false,
 }
 
 // Engine provides the brain of a bot by dispatching events to handlers.
@@ -59,7 +59,7 @@ type Engine struct {
 	// settings
 	notFoundReply string
 	numGoroutines int
-	echo          bool
+	shouldEcho    bool
 
 	mu       sync.Mutex
 	handlers []*handlerEntry
@@ -73,7 +73,7 @@ func New(source Source, sink Sink, settings Settings) *Engine {
 		sink:          sink,
 		notFoundReply: settings.NotFoundReply,
 		numGoroutines: settings.NumGoroutines,
-		echo:          settings.Echo,
+		shouldEcho:    settings.ShouldEcho,
 		mu:            sync.Mutex{},
 		handlers:      make([]*handlerEntry, 0),
 		stopped:       make(chan struct{}),
@@ -127,7 +127,7 @@ func (e *Engine) dispatch(ev *Event) {
 				}
 				return
 			}
-			if e.echo {
+			if e.shouldEcho {
 				fmt.Fprintf(buf, "You sent the message \"%s\".", msg.Text)
 				e.flush(msg.User, buf.String())
 				return
