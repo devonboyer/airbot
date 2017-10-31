@@ -14,8 +14,8 @@ func (c *Client) Base(baseID string) *BaseHandle {
 
 func (b *BaseHandle) Table(name string) *TableHandle {
 	return &TableHandle{
-		client: b.client,
-		baseID: b.baseID,
-		name:   name,
+		client:  b.client,
+		baseID:  b.baseID,
+		tableID: name,
 	}
 }

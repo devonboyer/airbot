@@ -11,19 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var showsScope = Scope{
-	BaseID:  "appwqWzX94IXnLEp5",
-	TableID: "Shows",
-}
-
 const showsFormulaFmt = "AND({Day of Week} = '%s', {Status} = 'Airing')"
 
 type showsController struct {
-	*ScopeController
+	*airtable.TableScopedClient
 }
 
 func newShowsController(client *airtable.Client) *showsController {
-	return &showsController{ScopeController: NewScopeController(client, showsScope)}
+	return &showsController{client.WithTableScope("appwqWzX94IXnLEp5", "Shows")}
 }
 
 func (c *showsController) todayHandler() func(w io.Writer, ev *botengine.Event) {
@@ -33,7 +28,10 @@ func (c *showsController) todayHandler() func(w io.Writer, ev *botengine.Event) 
 		ctx := context.Background()
 		day := time.Now().Weekday()
 		shows := &ShowList{}
-		err := c.List(ctx, fmt.Sprintf(showsFormulaFmt, day), shows)
+		err := c.
+			List().
+			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
+			Do(ctx, shows)
 		if err != nil {
 			fmt.Fprint(w, err)
 		} else {
@@ -53,7 +51,10 @@ func (c *showsController) tomorrowHandler() func(w io.Writer, ev *botengine.Even
 		ctx := context.Background()
 		day := time.Now().Add(24 * time.Hour).Weekday()
 		shows := &ShowList{}
-		err := c.List(ctx, fmt.Sprintf(showsFormulaFmt, day), shows)
+		err := c.
+			List().
+			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
+			Do(ctx, shows)
 		if err != nil {
 			fmt.Fprint(w, err)
 		} else {

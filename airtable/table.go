@@ -17,18 +17,13 @@ type SortField struct {
 }
 
 type TableHandle struct {
-	client *Client
-	baseID string
-	name   string
+	client  *Client
+	baseID  string
+	tableID string
 }
 
 func (t *TableHandle) List() *TableListCall {
-	return &TableListCall{
-		client:    t.client,
-		baseID:    t.baseID,
-		tableID:   t.name,
-		urlParams: make(url.Values),
-	}
+	return newTableListCall(t.client, t.baseID, t.tableID)
 }
 
 type TableListCall struct {
@@ -36,6 +31,12 @@ type TableListCall struct {
 	baseID    string
 	tableID   string
 	urlParams url.Values
+}
+
+func newTableListCall(client *Client, baseID, tableID string) *TableListCall {
+	return &TableListCall{
+		urlParams: make(url.Values),
+	}
 }
 
 func (c *TableListCall) Fields(fields []string) *TableListCall {
