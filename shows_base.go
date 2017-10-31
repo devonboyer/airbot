@@ -13,22 +13,23 @@ import (
 
 const showsFormulaFmt = "AND({Day of Week} = '%s', {Status} = 'Airing')"
 
-type showsController struct {
+// ShowsBase provides bot handlers for retrieving data from the Shows airtable base.
+type ShowsBase struct {
 	*airtable.TableScopedClient
 }
 
-func newShowsController(client *airtable.Client) *showsController {
-	return &showsController{client.WithTableScope("appwqWzX94IXnLEp5", "Shows")}
+func NewShowsBase(client *airtable.Client) *ShowsBase {
+	return &ShowsBase{client.WithTableScope("appwqWzX94IXnLEp5", "Shows")}
 }
 
-func (c *showsController) todayHandler() func(w io.Writer, ev *botengine.Event) {
+func (b *ShowsBase) TodayHandler() func(w io.Writer, ev *botengine.Event) {
 	return func(w io.Writer, ev *botengine.Event) {
 		logrus.WithField("pattern", "shows today").Info("handler called")
 
 		ctx := context.Background()
 		day := time.Now().Weekday()
 		shows := &ShowList{}
-		err := c.
+		err := b.
 			List().
 			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
 			Do(ctx, shows)
@@ -44,14 +45,14 @@ func (c *showsController) todayHandler() func(w io.Writer, ev *botengine.Event) 
 	}
 }
 
-func (c *showsController) tomorrowHandler() func(w io.Writer, ev *botengine.Event) {
+func (b *ShowsBase) TomorrowHandler() func(w io.Writer, ev *botengine.Event) {
 	return func(w io.Writer, ev *botengine.Event) {
 		logrus.WithField("pattern", "shows tomorrow").Info("handler called")
 
 		ctx := context.Background()
 		day := time.Now().Add(24 * time.Hour).Weekday()
 		shows := &ShowList{}
-		err := c.
+		err := b.
 			List().
 			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
 			Do(ctx, shows)
