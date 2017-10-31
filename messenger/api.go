@@ -105,13 +105,13 @@ func setContentType(headers http.Header, value string) {
 
 // https://developers.facebook.com/docs/messenger-platform/reference/send-api/error-codes
 type Error struct {
-	Message    string `json:"message"`
-	Type       string `json:"type"`
-	Code       int    `json:"code"`
-	ErrorData  string `json:"error_data"`
-	FBstraceID string `json:"fbstrace_id"`
-	StatusCode int
-	Body       string
+	Message      string `json:"message"`
+	Type         string `json:"type"`
+	Code         int    `json:"code"`
+	ErrorSubcode int    `json:"error_subcode"`
+	FBtraceID    string `json:"fbtrace_id"`
+	StatusCode   int
+	Body         string
 }
 
 func (e *Error) Error() string {

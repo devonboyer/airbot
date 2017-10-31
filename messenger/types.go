@@ -41,4 +41,10 @@ type Callback struct {
 		Seq  int64  `json:"seq"`
 		Text string `json:"text,omitempty"`
 	} `json:"message,omitempty"`
+	NLP map[string]Entity `json:"nlp,omitempty"`
+}
+
+type Entity struct {
+	Confidence float32 `json:"confidence,omitempty"`
+	Value      string  `json:"value,omitempty"`
 }
