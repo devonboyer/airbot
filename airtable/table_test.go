@@ -1,13 +1,13 @@
 package airtable
 
 import (
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func Test_TableListCall(t *testing.T) {
+	client := New("").WithTableScope("", "")
 	var tests = []struct {
 		desc string
 		call *TableListCall
@@ -15,12 +15,12 @@ func Test_TableListCall(t *testing.T) {
 	}{
 		{
 			"no options",
-			newTableListCall(),
+			client.List(),
 			"",
 		},
 		{
 			"many list options",
-			newTableListCall().
+			client.List().
 				Fields([]string{"foo", "bar"}).
 				FilterByFormula("foo").
 				MaxRecords(100).
@@ -35,12 +35,5 @@ func Test_TableListCall(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			require.Equal(t, test.qs, test.call.urlParams.Encode())
 		})
-	}
-}
-
-func newTableListCall() *TableListCall {
-	return &TableListCall{
-		client:    &Client{},
-		urlParams: make(url.Values),
 	}
 }
