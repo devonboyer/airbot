@@ -18,7 +18,7 @@ func NewBot(client *airtable.Client, source botengine.Source, sink botengine.Sin
 }
 
 func (b *Bot) setupHandlers(client *airtable.Client) {
-	shows := NewShowsBase(client)
+	shows := &ShowsBase{client.WithBaseScope(ShowsBaseID)}
 	b.HandleFunc("shows today", shows.TodayHandler())
 	b.HandleFunc("shows tomorrow", shows.TomorrowHandler())
 }

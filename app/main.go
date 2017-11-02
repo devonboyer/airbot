@@ -32,7 +32,7 @@ func main() {
 		logrus.SetFormatter(&logrus.JSONFormatter{})
 	}
 
-	logger := logrus.WithField("version", version)
+	logger := logrus.StandardLogger()
 
 	logger.Info("Starting airbot")
 

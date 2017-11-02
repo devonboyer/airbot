@@ -11,15 +11,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const showsFormulaFmt = "AND({Day of Week} = '%s', {Status} = 'Airing')"
+const (
+	ShowsBaseID  = "appwqWzX94IXnLEp5"
+	ShowsTableID = "Shows"
+
+	showsFormulaFmt = "AND({Day of Week} = '%s', {Status} = 'Airing')"
+)
 
 // ShowsBase provides bot handlers for retrieving data from the Shows airtable base.
 type ShowsBase struct {
-	*airtable.TableScopedClient
-}
-
-func NewShowsBase(client *airtable.Client) *ShowsBase {
-	return &ShowsBase{client.WithTableScope("appwqWzX94IXnLEp5", "Shows")}
+	*airtable.BaseScopedClient
 }
 
 func (b *ShowsBase) TodayHandler() func(w io.Writer, ev *botengine.Event) {
@@ -30,6 +31,7 @@ func (b *ShowsBase) TodayHandler() func(w io.Writer, ev *botengine.Event) {
 		day := time.Now().Weekday()
 		shows := &ShowList{}
 		err := b.
+			Table(ShowsTableID).
 			List().
 			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
 			Do(ctx, shows)
@@ -53,6 +55,7 @@ func (b *ShowsBase) TomorrowHandler() func(w io.Writer, ev *botengine.Event) {
 		day := time.Now().Add(24 * time.Hour).Weekday()
 		shows := &ShowList{}
 		err := b.
+			Table(ShowsTableID).
 			List().
 			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
 			Do(ctx, shows)
