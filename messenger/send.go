@@ -25,18 +25,6 @@ func (c *Client) SendByID(recipientID string) *SendHandle {
 	}
 }
 
-func (c *Client) MarkSeen(ctx context.Context, recipientID string) error {
-	return c.SendByID(recipientID).Action(MarkSeen).Do(ctx)
-}
-
-func (c *Client) TypingOn(ctx context.Context, recipientID string) error {
-	return c.SendByID(recipientID).Action(TypingOn).Do(ctx)
-}
-
-func (c *Client) TypingOff(ctx context.Context, recipientID string) error {
-	return c.SendByID(recipientID).Action(TypingOff).Do(ctx)
-}
-
 type SendHandle struct {
 	client      *Client
 	recipientID string
