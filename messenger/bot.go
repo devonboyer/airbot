@@ -8,7 +8,7 @@ import (
 
 const eventBufferSize = 1024
 
-// Listener implements botengine.Listener interface.
+// Listener implements botengine.Listener and EventHandler interfaces.
 type Listener struct {
 	EventHandler
 
@@ -61,6 +61,14 @@ func NewSender(client *Client) *Sender {
 	return &Sender{
 		client: client,
 	}
+}
+
+func (s *Sender) TypingOn(ctx context.Context, user botengine.User) error {
+	return s.client.TypingOn(ctx, user.ID)
+}
+
+func (s *Sender) TypingOff(ctx context.Context, user botengine.User) error {
+	return s.client.TypingOff(ctx, user.ID)
 }
 
 func (s *Sender) Send(ctx context.Context, ev *botengine.Event) error {
