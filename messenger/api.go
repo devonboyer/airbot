@@ -72,18 +72,6 @@ func New(accessToken, verifyToken, appSecret string, opts ...ClientOption) *Clie
 	return client
 }
 
-func (c *Client) MarkSeen(ctx context.Context, recipientID string) error {
-	return c.Send(recipientID).Action(MarkSeen).Do(ctx)
-}
-
-func (c *Client) TypingOn(ctx context.Context, recipientID string) error {
-	return c.Send(recipientID).Action(TypingOn).Do(ctx)
-}
-
-func (c *Client) TypingOff(ctx context.Context, recipientID string) error {
-	return c.Send(recipientID).Action(TypingOff).Do(ctx)
-}
-
 func (c *Client) doRequest(ctx context.Context, v interface{}) (*http.Response, error) {
 	buf := &bytes.Buffer{}
 	err := json.NewEncoder(buf).Encode(v)
@@ -101,6 +89,10 @@ func (c *Client) doRequest(ctx context.Context, v interface{}) (*http.Response, 
 
 func setContentType(headers http.Header, value string) {
 	headers.Set("Content-Type", value)
+}
+
+func handleError(w http.ResponseWriter, code int) {
+	http.Error(w, http.StatusText(code), code)
 }
 
 // https://developers.facebook.com/docs/messenger-platform/reference/send-api/error-codes

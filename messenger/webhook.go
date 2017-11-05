@@ -9,8 +9,11 @@ import (
 	"net/http"
 )
 
+// EventHandler responds to a webhook event.
+//
+// An EventHandler must be safe for concurrent use by multiple
+// goroutines.
 type EventHandler interface {
-	// HandleEvent may be called from multiple goroutines. Note that no effort is made to buffer events.
 	HandleEvent(*Event)
 }
 
@@ -22,6 +25,7 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 
 			// Handle verification request.
 			if req.FormValue("hub.verify_token") == c.verifyToken {
+				setContentType(w.Header(), "text/plain; charset=utf-8")
 				w.Write([]byte(req.FormValue("hub.challenge")))
 				w.WriteHeader(http.StatusOK)
 				return
@@ -35,23 +39,23 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				c.logger.Printf("messenger: could not ready body")
-				w.WriteHeader(http.StatusInternalServerError)
+				handleError(w, http.StatusInternalServerError)
 				return
 			}
 
-			c.logger.Printf("messenger: received webhook event: %v", string(body))
+			c.logger.Printf("messenger: received webhook event, %v", string(body))
 
 			// Verify event signature.
 			if !c.skipVerify && !verifySignature(c.appSecret, body, req.Header.Get("X-Hub-Signature")[5:]) {
 				c.logger.Printf("messenger: invalid request signature")
-				w.WriteHeader(http.StatusUnauthorized)
+				handleError(w, http.StatusUnauthorized)
 				return
 			}
 
 			var ev = &Event{}
 			if err := json.Unmarshal(body, ev); err != nil {
-				c.logger.Printf("messenger: could not unmarshal event: %v", err)
-				w.WriteHeader(http.StatusInternalServerError)
+				c.logger.Printf("messenger: could not unmarshal event, %v", err)
+				handleError(w, http.StatusInternalServerError)
 				return
 			}
 
@@ -61,10 +65,10 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 				evh.HandleEvent(ev)
 				w.WriteHeader(http.StatusOK)
 			default:
-				w.WriteHeader(http.StatusNotFound)
+				handleError(w, http.StatusNotFound)
 			}
 		default:
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			handleError(w, http.StatusMethodNotAllowed)
 		}
 	}
 }

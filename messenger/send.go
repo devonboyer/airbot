@@ -18,21 +18,28 @@ const (
 	MarkSeen     = SenderAction("mark_seen")
 )
 
-type SendHandle struct {
-	client      *Client
-	recipientID string
-}
-
-func (c *Client) Send(recipientID string) *SendHandle {
+func (c *Client) SendByID(recipientID string) *SendHandle {
 	return &SendHandle{
 		client:      c,
 		recipientID: recipientID,
 	}
 }
 
-type SenderActionCall struct {
-	client *Client
-	data   *SenderActionMarshaler
+func (c *Client) MarkSeen(ctx context.Context, recipientID string) error {
+	return c.SendByID(recipientID).Action(MarkSeen).Do(ctx)
+}
+
+func (c *Client) TypingOn(ctx context.Context, recipientID string) error {
+	return c.SendByID(recipientID).Action(TypingOn).Do(ctx)
+}
+
+func (c *Client) TypingOff(ctx context.Context, recipientID string) error {
+	return c.SendByID(recipientID).Action(TypingOff).Do(ctx)
+}
+
+type SendHandle struct {
+	client      *Client
+	recipientID string
 }
 
 func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
@@ -43,6 +50,19 @@ func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
 			Action:    string(action),
 		},
 	}
+}
+
+func (r *SendHandle) Message(notifType NotifType) *MessageHandle {
+	return &MessageHandle{
+		client:      r.client,
+		recipientID: r.recipientID,
+		notifType:   notifType,
+	}
+}
+
+type SenderActionCall struct {
+	client *Client
+	data   *SenderActionMarshaler
 }
 
 func (c *SenderActionCall) Do(ctx context.Context) error {
@@ -59,19 +79,6 @@ type MessageHandle struct {
 	notifType   NotifType
 }
 
-func (r *SendHandle) Message(notifType NotifType) *MessageHandle {
-	return &MessageHandle{
-		client:      r.client,
-		recipientID: r.recipientID,
-		notifType:   notifType,
-	}
-}
-
-type SendMessageCall struct {
-	client *Client
-	data   *MessageMarshaler
-}
-
 func (r *MessageHandle) Text(text string) *SendMessageCall {
 	return &SendMessageCall{
 		client: r.client,
@@ -81,6 +88,11 @@ func (r *MessageHandle) Text(text string) *SendMessageCall {
 			NotifType: string(r.notifType),
 		},
 	}
+}
+
+type SendMessageCall struct {
+	client *Client
+	data   *MessageMarshaler
 }
 
 func (c *SendMessageCall) Do(ctx context.Context) error {

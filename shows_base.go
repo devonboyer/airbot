@@ -12,15 +12,20 @@ import (
 )
 
 const (
-	ShowsBaseID  = "appwqWzX94IXnLEp5"
-	ShowsTableID = "Shows"
-
+	showsBaseID     = "appwqWzX94IXnLEp5"
+	showsTableID    = "Shows"
 	showsFormulaFmt = "AND({Day of Week} = '%s', {Status} = 'Airing')"
 )
 
 // ShowsBase provides bot handlers for retrieving data from the Shows airtable base.
 type ShowsBase struct {
 	*airtable.BaseScopedClient
+}
+
+func NewShowsBase(client *airtable.Client) *ShowsBase {
+	return &ShowsBase{
+		client.WithBaseScope(showsBaseID),
+	}
 }
 
 func (b *ShowsBase) TodayHandler() func(w io.Writer, ev *botengine.Event) {
@@ -31,7 +36,7 @@ func (b *ShowsBase) TodayHandler() func(w io.Writer, ev *botengine.Event) {
 		day := time.Now().Weekday()
 		shows := &ShowList{}
 		err := b.
-			Table(ShowsTableID).
+			Table(showsTableID).
 			List().
 			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
 			Do(ctx, shows)
@@ -55,7 +60,7 @@ func (b *ShowsBase) TomorrowHandler() func(w io.Writer, ev *botengine.Event) {
 		day := time.Now().Add(24 * time.Hour).Weekday()
 		shows := &ShowList{}
 		err := b.
-			Table(ShowsTableID).
+			Table(showsTableID).
 			List().
 			FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
 			Do(ctx, shows)

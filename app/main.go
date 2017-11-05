@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/devonboyer/airbot/botengine"
+
 	"github.com/devonboyer/airbot"
 	"github.com/devonboyer/airbot/airtable"
 	"github.com/devonboyer/airbot/messenger"
@@ -77,19 +79,32 @@ func main() {
 		airtable.WithHTTPClient(hc),
 	)
 
-	source := airbot.NewMessengerSource(messengerClient)
-	sink := airbot.NewMessengerSink(messengerClient)
+	listener := messenger.NewListener(messengerClient)
 
 	// Run bot
-	bot := airbot.NewBot(airtableClient, source, sink)
+	bot := botengine.New(botengine.DefaultSettings)
+	bot.Listener = listener
+	bot.Sender = messenger.NewSender(messengerClient)
+
+	setupBot(bot, airtableClient)
+
+	// Run the bot.
 	bot.Run()
 	defer bot.Stop()
 
-	setupRoutes(messengerClient, source)
+	setupRoutes(messengerClient, listener)
 
+	// Run appengine server.
 	appengine.Main()
 }
 
 func setupRoutes(client *messenger.Client, evh messenger.EventHandler) {
 	http.HandleFunc("/webhook", client.WebhookHandler(evh))
+}
+
+func setupBot(bot *botengine.Bot, client *airtable.Client) {
+	// Setup shows handlers
+	shows := airbot.NewShowsBase(client)
+	bot.HandleFunc("shows today", shows.TodayHandler())
+	bot.HandleFunc("shows tomorrow", shows.TomorrowHandler())
 }
