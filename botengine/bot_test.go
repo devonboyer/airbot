@@ -28,6 +28,10 @@ type mockSender struct {
 
 func newMockSender() *mockSender { return &mockSender{sentChan: make(chan *Event, 1)} }
 
+func (m *mockSender) TypingOn(_ context.Context, _ User) error { return nil }
+
+func (m *mockSender) TypingOff(_ context.Context, _ User) error { return nil }
+
 func (m *mockSender) Send(_ context.Context, ev *Event) error {
 	m.sentChan <- ev
 	return nil
@@ -38,7 +42,10 @@ func (m *mockSender) Close() {}
 func Test_Engine(t *testing.T) {
 	listener := newMockListener()
 	sender := newMockSender()
-	e := New(listener, sender, DefaultSettings)
+
+	e := New(DefaultSettings)
+	e.Listener = listener
+	e.Sender = sender
 
 	e.HandleFunc("ping", func(w io.Writer, ev *Event) {
 		fmt.Fprintf(w, "pong")

@@ -81,14 +81,14 @@ func main() {
 
 	listener := messenger.NewListener(messengerClient)
 
-	// Run bot
+	// Create and setup bot.
 	bot := botengine.New(botengine.DefaultSettings)
 	bot.Listener = listener
 	bot.Sender = messenger.NewSender(messengerClient)
 
 	setupBot(bot, airtableClient)
 
-	// Run the bot.
+	// Run bot.
 	bot.Run()
 	defer bot.Stop()
 

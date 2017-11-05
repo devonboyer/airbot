@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	configDir   = "../config"
 	projectID   = "rising-artifact-182801"
 	locationID  = "global"
 	keyRingID   = "airbot"

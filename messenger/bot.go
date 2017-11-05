@@ -8,7 +8,7 @@ import (
 
 const eventBufferSize = 1024
 
-// Listener implements botengine.Listener interface.
+// Listener implements botengine.Listener and EventHandler interfaces.
 type Listener struct {
 	EventHandler
 
@@ -34,8 +34,7 @@ func (l *Listener) HandleEvent(ev *Event) {
 
 			// Mark message as seen.
 			ctx := context.Background()
-			err := l.client.MarkSeen(ctx, callback.Sender.ID)
-			if err != nil {
+			if err := l.client.SendByID(callback.Sender.ID).Action(MarkSeen).Do(ctx); err != nil {
 				l.client.logger.Printf("messenger: Failed to mark seen, %s", err)
 			}
 
@@ -61,6 +60,14 @@ func NewSender(client *Client) *Sender {
 	return &Sender{
 		client: client,
 	}
+}
+
+func (s *Sender) TypingOn(ctx context.Context, user botengine.User) error {
+	return s.client.SendByID(user.ID).Action(TypingOn).Do(ctx)
+}
+
+func (s *Sender) TypingOff(ctx context.Context, user botengine.User) error {
+	return s.client.SendByID(user.ID).Action(TypingOff).Do(ctx)
 }
 
 func (s *Sender) Send(ctx context.Context, ev *botengine.Event) error {

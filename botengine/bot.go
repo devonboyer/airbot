@@ -54,6 +54,8 @@ type Listener interface {
 // goroutines.
 type Sender interface {
 	Send(context.Context, *Event) error
+	TypingOn(context.Context, User) error
+	TypingOff(context.Context, User) error
 	Close()
 }
 
@@ -137,7 +139,14 @@ func (b *Bot) dispatch(ev *Event) {
 		for _, h := range b.handlers {
 			buf := &bytes.Buffer{}
 			if h.matcher.MatchString(msg.Text) {
+
+				ctx := context.Background()
+
+				// FIXME: These errors should be handled more gracefully.
+				_ = b.Sender.TypingOn(ctx, msg.User)
 				h.handler.Handle(buf, ev)
+				_ = b.Sender.TypingOff(ctx, msg.User)
+
 				if reply := buf.String(); reply != "" {
 					b.send(msg.User, reply)
 				}
