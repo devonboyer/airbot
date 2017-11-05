@@ -1,6 +1,7 @@
 package botengine
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"testing"
@@ -9,38 +10,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const bufferSize = 1024
-
-type mockSource struct {
+type mockListener struct {
 	eventsChan chan *Event
 }
 
-func newMockSource() *mockSource { return &mockSource{eventsChan: make(chan *Event, bufferSize)} }
+func newMockListener() *mockListener { return &mockListener{eventsChan: make(chan *Event, 1)} }
 
-func (m *mockSource) Events() <-chan *Event {
+func (m *mockListener) Events() <-chan *Event {
 	return m.eventsChan
 }
 
-func (m *mockSource) Close() {}
+func (m *mockListener) Close() {}
 
-type mockSink struct {
-	flushedChan chan *Event
+type mockSender struct {
+	sentChan chan *Event
 }
 
-func newMockSink() *mockSink { return &mockSink{flushedChan: make(chan *Event, bufferSize)} }
+func newMockSender() *mockSender { return &mockSender{sentChan: make(chan *Event, 1)} }
 
-func (m *mockSink) Flush(ev *Event) error {
-	m.flushedChan <- ev
+func (m *mockSender) Send(_ context.Context, ev *Event) error {
+	m.sentChan <- ev
 	return nil
 }
 
-func (m *mockSink) Close() {}
+func (m *mockSender) Close() {}
 
 func Test_Engine(t *testing.T) {
-	source := newMockSource()
-	sink := newMockSink()
-	e := New(source, sink)
-	e.Handle("ping", func(w io.Writer, ev *Event) {
+	listener := newMockListener()
+	sender := newMockSender()
+	e := New(listener, sender, DefaultSettings)
+
+	e.HandleFunc("ping", func(w io.Writer, ev *Event) {
 		fmt.Fprintf(w, "pong")
 	})
 	e.Run()
@@ -68,7 +68,7 @@ func Test_Engine(t *testing.T) {
 			},
 		},
 		{
-			"command bot does not undertand",
+			"not found",
 			&Event{
 				Type: MessageEvent,
 				Object: &Message{
@@ -80,17 +80,16 @@ func Test_Engine(t *testing.T) {
 				Type: MessageEvent,
 				Object: &Message{
 					User: User{ID: "1"},
-					Text: defaultNotFoundReply,
+					Text: DefaultSettings.NotFoundReply,
 				},
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			source.eventsChan <- test.sourceEvent
-
+			listener.eventsChan <- test.sourceEvent
 			select {
-			case ev := <-sink.flushedChan:
+			case ev := <-sender.sentChan:
 				require.Equal(t, ev, test.sinkEvent)
 			case <-time.After(1 * time.Second):
 				require.Fail(t, "timout")

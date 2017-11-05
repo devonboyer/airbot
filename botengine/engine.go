@@ -2,23 +2,12 @@ package botengine
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
-	"strings"
+	"regexp"
 	"sync"
 )
-
-const defaultNotFoundReply = "I don't understand 🤷"
-
-type Source interface {
-	Events() <-chan *Event
-	Close()
-}
-
-type Sink interface {
-	Flush(*Event) error
-	Close()
-}
 
 type Handler interface {
 	Handle(io.Writer, *Event)
@@ -30,31 +19,49 @@ func (f HandlerFunc) Handle(w io.Writer, ev *Event) {
 	f(w, ev)
 }
 
+type matcher interface {
+	MatchString(string) bool
+}
+
 type handlerEntry struct {
-	pattern string // pattern is not case-sensitive
+	matcher matcher
 	handler Handler
 }
 
 type Settings struct {
 	NumGoroutines int
 	NotFoundReply string
-	ShouldEcho    bool
+	// ShouldEcho will echo responses to the Chatter if no handler matches the received event.
+	// This may be useful for debugging. Defaults to false.
+	ShouldEcho bool
 }
 
 var DefaultSettings = Settings{
 	NumGoroutines: 1,
-	NotFoundReply: defaultNotFoundReply,
+	NotFoundReply: "I don't understand 🤷",
 	ShouldEcho:    false,
 }
 
-// Engine provides the brain of a bot by dispatching events to handlers.
+// Listener is an interface for receiving messages from a chat service like Messenger or Slack.
+type Listener interface {
+	Events() <-chan *Event
+	Close()
+}
+
+// Sender is an interface for sending messages to a chat service like Messenger or Slack.
 //
-// type Bot struct {
-//     *botengine.Engine
-// }
-type Engine struct {
-	source Source
-	sink   Sink
+// A Sender must be safe for concurrent use by multiple
+// goroutines.
+type Sender interface {
+	Send(context.Context, *Event) error
+	Close()
+}
+
+// Bot receives events from a Listener, dispatches events to handlers, and sends
+// responses back to a Sender.
+type Bot struct {
+	Listener Listener
+	Sender   Sender
 
 	// settings
 	notFoundReply string
@@ -67,10 +74,8 @@ type Engine struct {
 	wg       sync.WaitGroup
 }
 
-func New(source Source, sink Sink, settings Settings) *Engine {
-	return &Engine{
-		source:        source,
-		sink:          sink,
+func New(settings Settings) *Bot {
+	return &Bot{
 		notFoundReply: settings.NotFoundReply,
 		numGoroutines: settings.NumGoroutines,
 		shouldEcho:    settings.ShouldEcho,
@@ -81,65 +86,76 @@ func New(source Source, sink Sink, settings Settings) *Engine {
 	}
 }
 
-func (e *Engine) Handle(pattern string, handler Handler) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.handlers = append(e.handlers, &handlerEntry{
-		pattern: strings.ToLower(pattern),
+func (b *Bot) Handle(pattern string, handler Handler) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	// Compile the pattern as a regular expression.
+	re, err := regexp.Compile(fmt.Sprintf("(?is)%s", pattern))
+	if err != nil {
+		panic("botengine: invalid pattern " + pattern)
+	}
+	b.handlers = append(b.handlers, &handlerEntry{
+		matcher: re,
 		handler: handler,
 	})
 }
 
-func (e *Engine) HandleFunc(pattern string, handler func(io.Writer, *Event)) {
-	e.Handle(pattern, HandlerFunc(handler))
+func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Event)) {
+	b.Handle(pattern, HandlerFunc(handler))
 }
 
-func (e *Engine) Run() {
-	for i := 0; i < e.numGoroutines; i++ {
-		go e.run()
+func (b *Bot) Run() {
+	if b.Listener == nil {
+		panic("botengine: Listener must not be nil")
+	}
+	if b.Sender == nil {
+		panic("botengine: Sender must not be nil")
+	}
+	for i := 0; i < b.numGoroutines; i++ {
+		go b.run()
 	}
 }
 
-func (e *Engine) run() {
-	e.wg.Add(1)
-	defer e.wg.Done()
+func (b *Bot) run() {
+	b.wg.Add(1)
+	defer b.wg.Done()
 
 	for {
 		select {
-		case ev := <-e.source.Events():
-			e.dispatch(ev)
-		case <-e.stopped:
+		case ev := <-b.Listener.Events():
+			b.dispatch(ev)
+		case <-b.stopped:
 			return
 		}
 	}
 }
 
-func (e *Engine) dispatch(ev *Event) {
+func (b *Bot) dispatch(ev *Event) {
 	switch ev.Type {
 	case MessageEvent:
 		msg := ev.Object.(*Message)
-		for _, h := range e.handlers {
+		for _, h := range b.handlers {
 			buf := &bytes.Buffer{}
-			if h.pattern == strings.ToLower(msg.Text) {
+			if h.matcher.MatchString(msg.Text) {
 				h.handler.Handle(buf, ev)
 				if reply := buf.String(); reply != "" {
-					e.flush(msg.User, reply)
+					b.send(msg.User, reply)
 				}
 				return
 			}
-			if e.shouldEcho {
+			if b.shouldEcho {
 				fmt.Fprintf(buf, "You sent the message \"%s\".", msg.Text)
-				e.flush(msg.User, buf.String())
+				b.send(msg.User, buf.String())
 				return
 			}
 		}
-		e.replyNotFound(msg.User)
+		b.replyNotFound(msg.User)
 	default:
 		// Ignore unsupported events.
 	}
 }
 
-func (e *Engine) flush(usr User, text string) {
+func (b *Bot) send(usr User, text string) {
 	res := &Event{
 		Type: MessageEvent,
 		Object: &Message{
@@ -147,17 +163,19 @@ func (e *Engine) flush(usr User, text string) {
 			Text: text,
 		},
 	}
-	_ = e.sink.Flush(res)
+	// FIXME: This error should be handled more gracefully.
+	ctx := context.Background()
+	_ = b.Sender.Send(ctx, res)
 }
 
-func (e *Engine) replyNotFound(usr User) {
-	e.flush(usr, e.notFoundReply)
+func (b *Bot) replyNotFound(usr User) {
+	b.send(usr, b.notFoundReply)
 }
 
-func (e *Engine) Stop() {
-	close(e.stopped)
-	e.wg.Wait()
+func (b *Bot) Stop() {
+	close(b.stopped)
+	b.wg.Wait()
 
-	e.source.Close()
-	e.sink.Close()
+	b.Listener.Close()
+	b.Sender.Close()
 }
