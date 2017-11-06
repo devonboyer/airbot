@@ -51,7 +51,7 @@ type Bot struct {
 	Listener      Listener
 	Sender        Sender
 	NumGoroutines int
-	// NotFoundHandler will be called when no handlers match an incoming messaage.
+	// NotFoundHandler will be called when no handlers match an incoming message.
 	NotFoundHandler Handler
 
 	mu       sync.Mutex
