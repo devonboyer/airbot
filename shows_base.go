@@ -36,13 +36,9 @@ func (b *ShowsBase) TodayHandler() func(io.Writer, *botengine.Message) {
 		day := time.Now().Weekday().String()
 		shows, err := b.GetShows(ctx, day)
 		if err != nil {
-			handleError(err, w)
+			handleError(w, err)
 		} else {
-			if len(shows.Records) > 0 {
-				fmt.Fprintf(w, "Shows on today:\n%s", shows)
-			} else {
-				fmt.Fprintf(w, "No shows on today")
-			}
+			handleShows(w, shows, "today")
 		}
 	}
 }
@@ -55,13 +51,9 @@ func (b *ShowsBase) TomorrowHandler() func(io.Writer, *botengine.Message) {
 		day := time.Now().Add(24 * time.Hour).Weekday().String()
 		shows, err := b.GetShows(ctx, day)
 		if err != nil {
-			handleError(err, w)
+			handleError(w, err)
 		} else {
-			if len(shows.Records) > 0 {
-				fmt.Fprintf(w, "Shows on tomorrow:\n%s", shows)
-			} else {
-				fmt.Fprintf(w, "No shows on tomorrow")
-			}
+			handleShows(w, shows, "tomorrow")
 		}
 	}
 }
@@ -77,13 +69,9 @@ func (b *ShowsBase) DayOfWeekHandler() func(io.Writer, *botengine.Message) {
 		day := msg.Args()[1]
 		shows, err := b.GetShows(ctx, day)
 		if err != nil {
-			handleError(err, w)
+			handleError(w, err)
 		} else {
-			if len(shows.Records) > 0 {
-				fmt.Fprintf(w, "Shows on %s:\n%s", day, shows)
-			} else {
-				fmt.Fprintf(w, "No shows on %s", day)
-			}
+			handleShows(w, shows, day)
 		}
 	}
 }
@@ -101,6 +89,14 @@ func (b *ShowsBase) GetShows(ctx context.Context, day string) (*ShowList, error)
 	return shows, nil
 }
 
-func handleError(err error, w io.Writer) {
+func handleShows(w io.Writer, shows *ShowList, day string) {
+	if len(shows.Records) > 0 {
+		fmt.Fprintf(w, "Shows on %s:\n%s", day, shows)
+	} else {
+		fmt.Fprintf(w, "No shows on %s", day)
+	}
+}
+
+func handleError(w io.Writer, err error) {
 	fmt.Fprint(w, err)
 }
