@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"sync"
 )
 
 type Handler interface {
-	Handle(io.Writer, *Message)
+	Handle(io.Writer, *Request)
 }
 
-type HandlerFunc func(io.Writer, *Message)
+type HandlerFunc func(io.Writer, *Request)
 
-func (f HandlerFunc) Handle(w io.Writer, req *Message) {
+func (f HandlerFunc) Handle(w io.Writer, req *Request) {
 	f(w, req)
 }
 
@@ -84,7 +85,7 @@ func (b *Bot) Handle(pattern string, handler Handler) {
 	})
 }
 
-func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Message)) {
+func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Request)) {
 	b.Handle(pattern, HandlerFunc(handler))
 }
 
@@ -129,10 +130,15 @@ func (b *Bot) receive(msg *Message) {
 func (b *Bot) dispatch(handler Handler, msg *Message) {
 	buf := &bytes.Buffer{}
 
+	req := &Request{
+		Message: msg,
+		Args:    strings.Split(msg.Body, " "),
+	}
+
 	// Call handler.
 	ctx := context.Background()
 	_ = b.Sender.TypingOn(ctx, msg.Sender) // FIXME: Handle error.
-	handler.Handle(buf, msg)
+	handler.Handle(buf, req)
 	_ = b.Sender.TypingOff(ctx, msg.Sender) // FIXME: Handle error.
 
 	if body := buf.String(); body != "" {

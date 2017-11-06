@@ -28,8 +28,8 @@ func NewShowsBase(client *airtable.Client) *ShowsBase {
 	}
 }
 
-func (b *ShowsBase) TodayHandler() func(io.Writer, *botengine.Message) {
-	return func(w io.Writer, _ *botengine.Message) {
+func (b *ShowsBase) TodayHandler() func(io.Writer, *botengine.Request) {
+	return func(w io.Writer, _ *botengine.Request) {
 		logrus.WithField("pattern", "shows today").Info("handler called")
 
 		ctx := context.Background()
@@ -43,8 +43,8 @@ func (b *ShowsBase) TodayHandler() func(io.Writer, *botengine.Message) {
 	}
 }
 
-func (b *ShowsBase) TomorrowHandler() func(io.Writer, *botengine.Message) {
-	return func(w io.Writer, _ *botengine.Message) {
+func (b *ShowsBase) TomorrowHandler() func(io.Writer, *botengine.Request) {
+	return func(w io.Writer, _ *botengine.Request) {
 		logrus.WithField("pattern", "shows tomorrow").Info("handler called")
 
 		ctx := context.Background()
@@ -58,15 +58,15 @@ func (b *ShowsBase) TomorrowHandler() func(io.Writer, *botengine.Message) {
 	}
 }
 
-func (b *ShowsBase) DayOfWeekHandler() func(io.Writer, *botengine.Message) {
-	return func(w io.Writer, msg *botengine.Message) {
-		if len(msg.Args()) < 1 {
+func (b *ShowsBase) DayOfWeekHandler() func(io.Writer, *botengine.Request) {
+	return func(w io.Writer, req *botengine.Request) {
+		if len(req.Args) < 1 {
 			fmt.Fprint(w, "I didn't understand that. Maybe try again?")
 			return
 		}
 
 		ctx := context.Background()
-		day := msg.Args()[1]
+		day := req.Args[1]
 		shows, err := b.GetShows(ctx, day)
 		if err != nil {
 			handleError(w, err)

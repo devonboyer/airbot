@@ -46,11 +46,11 @@ func Test_Engine(t *testing.T) {
 	e := New()
 	e.Listener = listener
 	e.Sender = sender
-	e.NotFoundHandler = HandlerFunc(func(w io.Writer, msg *Message) {
-		fmt.Fprintf(w, msg.Body)
+	e.NotFoundHandler = HandlerFunc(func(w io.Writer, req *Request) {
+		fmt.Fprintf(w, req.Message.Body)
 	})
 
-	e.HandleFunc("ping", func(w io.Writer, _ *Message) {
+	e.HandleFunc("ping", func(w io.Writer, _ *Request) {
 		fmt.Fprintf(w, "pong")
 	})
 	e.Run()
