@@ -6,24 +6,25 @@ import (
 	"github.com/devonboyer/airbot/botengine"
 )
 
-const eventBufferSize = 1024
+const msgBufferSize = 1024
 
 // Listener implements botengine.Listener and EventHandler interfaces.
 type Listener struct {
 	EventHandler
 
-	client     *Client
-	eventsChan chan *botengine.Event
+	client  *Client
+	msgChan chan *botengine.Message
 }
 
 func NewListener(client *Client) *Listener {
 	return &Listener{
-		client: client,
+		client:  client,
+		msgChan: make(chan *botengine.Message, msgBufferSize),
 	}
 }
 
-func (l *Listener) Events() <-chan *botengine.Event {
-	return l.eventsChan
+func (l *Listener) Messages() <-chan *botengine.Message {
+	return l.msgChan
 }
 
 func (l *Listener) HandleEvent(ev *Event) {
@@ -38,12 +39,9 @@ func (l *Listener) HandleEvent(ev *Event) {
 				l.client.logger.Printf("messenger: Failed to mark seen, %s", err)
 			}
 
-			l.eventsChan <- &botengine.Event{
-				Type: botengine.MessageEvent,
-				Object: &botengine.Message{
-					User: botengine.User{ID: callback.Sender.ID},
-					Text: callback.Message.Text,
-				},
+			l.msgChan <- &botengine.Message{
+				Sender: botengine.User{ID: callback.Sender.ID},
+				Body:   callback.Message.Text,
 			}
 		}
 	}
@@ -70,22 +68,17 @@ func (s *Sender) TypingOff(ctx context.Context, user botengine.User) error {
 	return s.client.SendByID(user.ID).Action(TypingOff).Do(ctx)
 }
 
-func (s *Sender) Send(ctx context.Context, ev *botengine.Event) error {
-	switch ev.Type {
-	case botengine.MessageEvent:
-		msg := ev.Object.(*botengine.Message)
-		err := s.client.
-			SendByID(msg.User.ID).
-			Message(RegularNotif).
-			Text(msg.Text).
-			Do(ctx)
-		if err != nil {
-			s.client.logger.Printf("messenger: Failed to send message (psid: %s, text: %s), %s", msg.User.ID, msg.Text, err)
-			return err
-		}
-		s.client.logger.Printf("messenger: Sent message (psid: %s, text: %s)", msg.User.ID, msg.Text)
-	default:
+func (s *Sender) Send(ctx context.Context, res *botengine.Response) error {
+	err := s.client.
+		SendByID(res.Recipient.ID).
+		Message(RegularNotif).
+		Text(res.Body).
+		Do(ctx)
+	if err != nil {
+		s.client.logger.Printf("messenger: Failed to send message (psid: %s, text: %s), %s", res.Recipient.ID, res.Body, err)
+		return err
 	}
+	s.client.logger.Printf("messenger: Sent message (psid: %s, text: %s)", res.Recipient.ID, res.Body)
 	return nil
 }
 

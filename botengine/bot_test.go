@@ -11,29 +11,29 @@ import (
 )
 
 type mockListener struct {
-	eventsChan chan *Event
+	msgChan chan *Message
 }
 
-func newMockListener() *mockListener { return &mockListener{eventsChan: make(chan *Event, 1)} }
+func newMockListener() *mockListener { return &mockListener{msgChan: make(chan *Message, 1)} }
 
-func (m *mockListener) Events() <-chan *Event {
-	return m.eventsChan
+func (m *mockListener) Messages() <-chan *Message {
+	return m.msgChan
 }
 
 func (m *mockListener) Close() {}
 
 type mockSender struct {
-	sentChan chan *Event
+	sentChan chan *Response
 }
 
-func newMockSender() *mockSender { return &mockSender{sentChan: make(chan *Event, 1)} }
+func newMockSender() *mockSender { return &mockSender{sentChan: make(chan *Response, 1)} }
 
 func (m *mockSender) TypingOn(_ context.Context, _ User) error { return nil }
 
 func (m *mockSender) TypingOff(_ context.Context, _ User) error { return nil }
 
-func (m *mockSender) Send(_ context.Context, ev *Event) error {
-	m.sentChan <- ev
+func (m *mockSender) Send(_ context.Context, res *Response) error {
+	m.sentChan <- res
 	return nil
 }
 
@@ -43,61 +43,54 @@ func Test_Engine(t *testing.T) {
 	listener := newMockListener()
 	sender := newMockSender()
 
-	e := New(DefaultSettings)
+	e := New()
 	e.Listener = listener
 	e.Sender = sender
+	e.NotFoundHandler = HandlerFunc(func(w io.Writer, msg *Message) {
+		fmt.Fprintf(w, msg.Body)
+	})
 
-	e.HandleFunc("ping", func(w io.Writer, ev *Event) {
+	e.HandleFunc("ping", func(w io.Writer, _ *Message) {
 		fmt.Fprintf(w, "pong")
 	})
 	e.Run()
 	defer e.Stop()
 
 	tests := []struct {
-		name                   string
-		sourceEvent, sinkEvent *Event
+		name string
+		msg  *Message
+		res  *Response
 	}{
 		{
 			"command bot understands",
-			&Event{
-				Type: MessageEvent,
-				Object: &Message{
-					User: User{ID: "1"},
-					Text: "ping",
-				},
+			&Message{
+				Sender: User{ID: "1"},
+				Body:   "ping",
 			},
-			&Event{
-				Type: MessageEvent,
-				Object: &Message{
-					User: User{ID: "1"},
-					Text: "pong",
-				},
+			&Response{
+				Recipient: User{ID: "1"},
+				Body:      "pong",
 			},
 		},
 		{
 			"not found",
-			&Event{
-				Type: MessageEvent,
-				Object: &Message{
-					User: User{ID: "1"},
-					Text: "foo",
-				},
+			&Message{
+				Sender: User{ID: "1"},
+				Body:   "foo",
 			},
-			&Event{
-				Type: MessageEvent,
-				Object: &Message{
-					User: User{ID: "1"},
-					Text: DefaultSettings.NotFoundReply,
-				},
+			&Response{
+				Recipient: User{ID: "1"},
+				Body:      "foo",
 			},
 		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			listener.eventsChan <- test.sourceEvent
+			listener.msgChan <- test.msg
 			select {
-			case ev := <-sender.sentChan:
-				require.Equal(t, ev, test.sinkEvent)
+			case res := <-sender.sentChan:
+				require.Equal(t, res, test.res)
 			case <-time.After(1 * time.Second):
 				require.Fail(t, "timout")
 			}
