@@ -10,13 +10,30 @@ import (
 )
 
 type Handler interface {
-	Handle(io.Writer, *Event)
+	Handle(io.Writer, *Message)
 }
 
-type HandlerFunc func(io.Writer, *Event)
+type HandlerFunc func(io.Writer, *Message)
 
-func (f HandlerFunc) Handle(w io.Writer, ev *Event) {
-	f(w, ev)
+func (f HandlerFunc) Handle(w io.Writer, req *Message) {
+	f(w, req)
+}
+
+// Listener is an interface for receiving messages from a chat service like Messenger or Slack.
+type Listener interface {
+	Messages() <-chan *Message
+	Close()
+}
+
+// Sender is an interface for sending messages to a chat service like Messenger or Slack.
+//
+// A Sender must be safe for concurrent use by multiple
+// goroutines.
+type Sender interface {
+	Send(context.Context, *Response) error
+	TypingOn(context.Context, User) error
+	TypingOff(context.Context, User) error
+	Close()
 }
 
 type matcher interface {
@@ -28,47 +45,14 @@ type handlerEntry struct {
 	handler Handler
 }
 
-type Settings struct {
-	NumGoroutines int
-	NotFoundReply string
-	// ShouldEcho will echo responses to the Chatter if no handler matches the received event.
-	// This may be useful for debugging. Defaults to false.
-	ShouldEcho bool
-}
-
-var DefaultSettings = Settings{
-	NumGoroutines: 1,
-	NotFoundReply: "I don't understand 🤷",
-	ShouldEcho:    false,
-}
-
-// Listener is an interface for receiving messages from a chat service like Messenger or Slack.
-type Listener interface {
-	Events() <-chan *Event
-	Close()
-}
-
-// Sender is an interface for sending messages to a chat service like Messenger or Slack.
-//
-// A Sender must be safe for concurrent use by multiple
-// goroutines.
-type Sender interface {
-	Send(context.Context, *Event) error
-	TypingOn(context.Context, User) error
-	TypingOff(context.Context, User) error
-	Close()
-}
-
 // Bot receives events from a Listener, dispatches events to handlers, and sends
 // responses back to a Sender.
 type Bot struct {
-	Listener Listener
-	Sender   Sender
-
-	// settings
-	notFoundReply string
-	numGoroutines int
-	shouldEcho    bool
+	Listener      Listener
+	Sender        Sender
+	NumGoroutines int
+	// NotFoundHandler will be called when no handlers match an incoming messaage.
+	NotFoundHandler Handler
 
 	mu       sync.Mutex
 	handlers []*handlerEntry
@@ -76,11 +60,9 @@ type Bot struct {
 	wg       sync.WaitGroup
 }
 
-func New(settings Settings) *Bot {
+func New() *Bot {
 	return &Bot{
-		notFoundReply: settings.NotFoundReply,
-		numGoroutines: settings.NumGoroutines,
-		shouldEcho:    settings.ShouldEcho,
+		NumGoroutines: 1,
 		mu:            sync.Mutex{},
 		handlers:      make([]*handlerEntry, 0),
 		stopped:       make(chan struct{}),
@@ -102,7 +84,7 @@ func (b *Bot) Handle(pattern string, handler Handler) {
 	})
 }
 
-func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Event)) {
+func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Message)) {
 	b.Handle(pattern, HandlerFunc(handler))
 }
 
@@ -113,7 +95,7 @@ func (b *Bot) Run() {
 	if b.Sender == nil {
 		panic("botengine: Sender must not be nil")
 	}
-	for i := 0; i < b.numGoroutines; i++ {
+	for i := 0; i < b.NumGoroutines; i++ {
 		go b.run()
 	}
 }
@@ -124,61 +106,47 @@ func (b *Bot) run() {
 
 	for {
 		select {
-		case ev := <-b.Listener.Events():
-			b.dispatch(ev)
+		case msg := <-b.Listener.Messages():
+			b.receive(msg)
 		case <-b.stopped:
 			return
 		}
 	}
 }
 
-func (b *Bot) dispatch(ev *Event) {
-	switch ev.Type {
-	case MessageEvent:
-		msg := ev.Object.(*Message)
-		for _, h := range b.handlers {
-			buf := &bytes.Buffer{}
-			if h.matcher.MatchString(msg.Text) {
-
-				ctx := context.Background()
-
-				// FIXME: These errors should be handled more gracefully.
-				_ = b.Sender.TypingOn(ctx, msg.User)
-				h.handler.Handle(buf, ev)
-				_ = b.Sender.TypingOff(ctx, msg.User)
-
-				if reply := buf.String(); reply != "" {
-					b.send(msg.User, reply)
-				}
-				return
-			}
-			if b.shouldEcho {
-				fmt.Fprintf(buf, "You sent the message \"%s\".", msg.Text)
-				b.send(msg.User, buf.String())
-				return
-			}
+func (b *Bot) receive(msg *Message) {
+	for _, h := range b.handlers {
+		if h.matcher.MatchString(msg.Body) {
+			b.dispatch(h.handler, msg)
+			return
 		}
-		b.replyNotFound(msg.User)
-	default:
-		// Ignore unsupported events.
+	}
+	if b.NotFoundHandler != nil {
+		b.dispatch(b.NotFoundHandler, msg)
 	}
 }
 
-func (b *Bot) send(usr User, text string) {
-	res := &Event{
-		Type: MessageEvent,
-		Object: &Message{
-			User: usr,
-			Text: text,
-		},
-	}
-	// FIXME: This error should be handled more gracefully.
+func (b *Bot) dispatch(handler Handler, msg *Message) {
+	buf := &bytes.Buffer{}
+
+	// Call handler.
 	ctx := context.Background()
-	_ = b.Sender.Send(ctx, res)
+	_ = b.Sender.TypingOn(ctx, msg.Sender) // FIXME: Handle error.
+	handler.Handle(buf, msg)
+	_ = b.Sender.TypingOff(ctx, msg.Sender) // FIXME: Handle error.
+
+	if body := buf.String(); body != "" {
+		b.send(msg.Sender, body)
+	}
 }
 
-func (b *Bot) replyNotFound(usr User) {
-	b.send(usr, b.notFoundReply)
+func (b *Bot) send(recipient User, body string) {
+	res := &Response{
+		Recipient: recipient,
+		Body:      body,
+	}
+	ctx := context.Background()
+	_ = b.Sender.Send(ctx, res) // FIXME: Handle error.
 }
 
 func (b *Bot) Stop() {

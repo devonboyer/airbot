@@ -28,8 +28,8 @@ func NewShowsBase(client *airtable.Client) *ShowsBase {
 	}
 }
 
-func (b *ShowsBase) TodayHandler() func(w io.Writer, ev *botengine.Event) {
-	return func(w io.Writer, ev *botengine.Event) {
+func (b *ShowsBase) TodayHandler() func(io.Writer, *botengine.Message) {
+	return func(w io.Writer, _ *botengine.Message) {
 		logrus.WithField("pattern", "shows today").Info("handler called")
 
 		ctx := context.Background()
@@ -52,8 +52,8 @@ func (b *ShowsBase) TodayHandler() func(w io.Writer, ev *botengine.Event) {
 	}
 }
 
-func (b *ShowsBase) TomorrowHandler() func(w io.Writer, ev *botengine.Event) {
-	return func(w io.Writer, ev *botengine.Event) {
+func (b *ShowsBase) TomorrowHandler() func(io.Writer, *botengine.Message) {
+	return func(w io.Writer, _ *botengine.Message) {
 		logrus.WithField("pattern", "shows tomorrow").Info("handler called")
 
 		ctx := context.Background()

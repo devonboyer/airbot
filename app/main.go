@@ -82,17 +82,21 @@ func main() {
 	listener := messenger.NewListener(messengerClient)
 
 	// Create and setup bot.
-	bot := botengine.New(botengine.DefaultSettings)
+	bot := botengine.New()
 	bot.Listener = listener
 	bot.Sender = messenger.NewSender(messengerClient)
 
 	setupBot(bot, airtableClient)
+
+	logger.Info("Starting bot")
 
 	// Run bot.
 	bot.Run()
 	defer bot.Stop()
 
 	setupRoutes(messengerClient, listener)
+
+	logger.Info("Starting appengine server")
 
 	// Run appengine server.
 	appengine.Main()
