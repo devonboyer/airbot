@@ -12,7 +12,7 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
-const apiVersion = "2.6"
+const apiVersion = "2.8"
 
 type logger interface {
 	Printf(string, ...interface{})

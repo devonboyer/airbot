@@ -30,31 +30,30 @@ type SendHandle struct {
 	recipientID string
 }
 
-func (r *SendHandle) Action(action SenderAction) *SenderActionCall {
+func (h *SendHandle) Action(action SenderAction) *SenderActionCall {
 	return &SenderActionCall{
-		client: r.client,
-		data: &SenderActionMarshaler{
-			Recipient: Recipient{ID: r.recipientID},
+		client: h.client,
+		req: &SenderActionRequest{
+			Recipient: Recipient{ID: h.recipientID},
 			Action:    string(action),
 		},
 	}
 }
 
-func (r *SendHandle) Message(notifType NotifType) *MessageHandle {
+func (h *SendHandle) Message() *MessageHandle {
 	return &MessageHandle{
-		client:      r.client,
-		recipientID: r.recipientID,
-		notifType:   notifType,
+		client:      h.client,
+		recipientID: h.recipientID,
 	}
 }
 
 type SenderActionCall struct {
 	client *Client
-	data   *SenderActionMarshaler
+	req    *SenderActionRequest
 }
 
 func (c *SenderActionCall) Do(ctx context.Context) error {
-	res, err := c.client.doRequest(ctx, c.data)
+	res, err := c.client.doRequest(ctx, c.req)
 	if err != nil {
 		return err
 	}
@@ -67,24 +66,29 @@ type MessageHandle struct {
 	notifType   NotifType
 }
 
-func (r *MessageHandle) Text(text string) *SendMessageCall {
+func (h *MessageHandle) NotifType(notifType NotifType) *MessageHandle {
+	h.notifType = notifType
+	return h
+}
+
+func (h *MessageHandle) Text(text string) *SendMessageCall {
 	return &SendMessageCall{
-		client: r.client,
-		data: &MessageMarshaler{
-			Recipient: Recipient{ID: r.recipientID},
+		client: h.client,
+		req: &MessageRequest{
+			Recipient: Recipient{ID: h.recipientID},
 			Message:   Message{Text: text},
-			NotifType: string(r.notifType),
+			NotifType: string(h.notifType),
 		},
 	}
 }
 
 type SendMessageCall struct {
 	client *Client
-	data   *MessageMarshaler
+	req    *MessageRequest
 }
 
 func (c *SendMessageCall) Do(ctx context.Context) error {
-	res, err := c.client.doRequest(ctx, c.data)
+	res, err := c.client.doRequest(ctx, c.req)
 	if err != nil {
 		return err
 	}

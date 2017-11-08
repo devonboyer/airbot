@@ -20,7 +20,7 @@ func Test_WebhookHandler(t *testing.T) {
 		name, jsonResponse string
 	}{
 		{
-			"message event",
+			"unmarshal message event",
 			"{\"object\":\"page\",\"entry\":[{\"id\":\"233235520541490\",\"time\":1509072531432,\"messaging\":[{\"sender\":{\"id\":\"1687448547993463\"},\"recipient\":{\"id\":\"233235520541490\"},\"timestamp\":1508990647040,\"message\":{\"mid\":\"mid.$cAADUIEhRdW5liB9DAFfVtoBCMqlf\",\"seq\":63713,\"text\":\"foo\"}}]}]}",
 		},
 	}

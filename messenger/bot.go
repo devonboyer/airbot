@@ -71,7 +71,7 @@ func (s *Sender) TypingOff(ctx context.Context, user botengine.User) error {
 func (s *Sender) Send(ctx context.Context, res *botengine.Response) error {
 	err := s.client.
 		SendByID(res.Recipient.ID).
-		Message(RegularNotif).
+		Message().
 		Text(res.Body).
 		Do(ctx)
 	if err != nil {
