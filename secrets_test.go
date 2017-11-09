@@ -18,8 +18,12 @@ const (
 	cryptoKeyID = "secrets"
 )
 
+var secrets *Secrets
+
 func init() {
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(configDir, "service-account.json"))
+
+	secrets = MustReadSecrets("config")
 }
 
 func TestDecryptSecrets(t *testing.T) {

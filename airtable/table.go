@@ -35,6 +35,9 @@ type TableListCall struct {
 
 func newTableListCall(client *Client, baseID, tableID string) *TableListCall {
 	return &TableListCall{
+		client:    client,
+		baseID:    baseID,
+		tableID:   tableID,
 		urlParams: make(url.Values),
 	}
 }
