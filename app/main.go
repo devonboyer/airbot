@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"time"
@@ -85,8 +83,6 @@ func main() {
 	bot := botengine.New()
 	bot.ChatService = chatService
 
-	installNotFoundHandler(bot)
-
 	// Run bot.
 	logrus.Info("Starting bot")
 
@@ -120,10 +116,4 @@ func runBot(bot *botengine.Bot, client *airtable.Client) {
 			logrus.WithError(err).Error("bot error")
 		}
 	}
-}
-
-func installNotFoundHandler(bot *botengine.Bot) {
-	bot.NotFoundHandler = botengine.HandlerFunc(func(w io.Writer, msg *botengine.Message) {
-		fmt.Fprintf(w, "I don't understand \"%s\".", msg.Body)
-	})
 }

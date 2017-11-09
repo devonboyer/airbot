@@ -3,6 +3,7 @@ package botengine
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -40,6 +41,12 @@ type HandlerFunc func(io.Writer, *Message)
 func (f HandlerFunc) Handle(w io.Writer, msg *Message) {
 	f(w, msg)
 }
+
+func NotFound(w io.Writer, msg *Message) {
+	fmt.Fprintf(w, fmt.Sprintf("I don't understand \"%s\".", msg.Body))
+}
+
+func NotFoundHandler() Handler { return HandlerFunc(NotFound) }
 
 // ChatService is an interface for sending and receiving messages from a chat service
 // like Messenger.
@@ -85,11 +92,12 @@ type Bot struct {
 
 func New() *Bot {
 	return &Bot{
-		NumGoroutines: 1,
-		mu:            sync.Mutex{},
-		handlers:      make([]*handlerEntry, 0),
-		stopped:       make(chan struct{}),
-		wg:            sync.WaitGroup{},
+		NumGoroutines:   1,
+		NotFoundHandler: NotFoundHandler(),
+		mu:              sync.Mutex{},
+		handlers:        make([]*handlerEntry, 0),
+		stopped:         make(chan struct{}),
+		wg:              sync.WaitGroup{},
 	}
 }
 
