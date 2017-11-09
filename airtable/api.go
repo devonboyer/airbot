@@ -50,10 +50,14 @@ func setVersionHeader(headers http.Header) {
 	headers.Set("x-api-version", xVersionHeader)
 }
 
+func setAuthorizationHeader(headers http.Header, token string) {
+	headers.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+}
+
 type Error struct {
-	StatusCode int
 	Type       string `json:"type"`
 	Message    string `json:"message"`
+	StatusCode int
 	Body       string
 }
 
