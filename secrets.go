@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	cloudkms "google.golang.org/api/cloudkms/v1"
 )
@@ -42,14 +43,12 @@ func DecryptSecrets(ctx context.Context, projectID, locationID, keyRingID, crypt
 	}
 	resp, err := cloudkmsService.Projects.Locations.KeyRings.CryptoKeys.Decrypt(parentName, req).Do()
 	if err != nil {
-		fmt.Println("request failed")
-		return nil, err
+		return nil, errors.Wrap(err, "decrypt request failed")
 	}
 
 	plaintext, err := base64.StdEncoding.DecodeString(resp.Plaintext)
 	if err != nil {
-		fmt.Println("decode failed")
-		return nil, err
+		return nil, errors.Wrap(err, "decode failed")
 	}
 
 	var secrets = &Secrets{}
@@ -65,6 +64,8 @@ func MustReadSecrets(dir string) *Secrets {
 		panic(err)
 	}
 	var secrets = &Secrets{}
-	json.NewDecoder(file).Decode(secrets)
+	if err := json.NewDecoder(file).Decode(secrets); err != nil {
+		panic(err)
+	}
 	return secrets
 }
