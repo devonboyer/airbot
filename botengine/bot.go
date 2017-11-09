@@ -3,34 +3,51 @@ package botengine
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
+// Message represents an incoming message.
+type Message struct {
+	// Sender is the user who sent the message.
+	Sender User
+	// Body is the body of the message.
+	Body string
+}
+
+type Response struct {
+	// Recipient is the user who should receive the message.
+	Recipient User
+	// Body is the body of the message.
+	Body string
+}
+
+// User is a user in the chat service.
+type User struct {
+	// ID is the user's unique ID.
+	ID string
+}
+
 type Handler interface {
-	Handle(io.Writer, *Request)
+	Handle(io.Writer, *Message)
 }
 
-type HandlerFunc func(io.Writer, *Request)
+type HandlerFunc func(io.Writer, *Message)
 
-func (f HandlerFunc) Handle(w io.Writer, req *Request) {
-	f(w, req)
+func (f HandlerFunc) Handle(w io.Writer, msg *Message) {
+	f(w, msg)
 }
 
-// Listener is an interface for receiving messages from a chat service like Messenger or Slack.
-type Listener interface {
-	Messages() <-chan *Message
-	Close()
-}
-
-// Sender is an interface for sending messages to a chat service like Messenger or Slack.
+// ChatService is an interface for sending and receiving messages from a chat service
+// like Messenger.
 //
-// A Sender must be safe for concurrent use by multiple
+// A ChatService must be safe for concurrent use by multiple
 // goroutines.
-type Sender interface {
+type ChatService interface {
+	Messages() <-chan *Message
 	Send(context.Context, *Response) error
 	TypingOn(context.Context, User) error
 	TypingOff(context.Context, User) error
@@ -41,6 +58,12 @@ type matcher interface {
 	MatchString(string) bool
 }
 
+type stringMatcher string
+
+func (m stringMatcher) MatchString(s string) bool {
+	return strings.ToLower(s) == string(m)
+}
+
 type handlerEntry struct {
 	matcher matcher
 	handler Handler
@@ -49,8 +72,7 @@ type handlerEntry struct {
 // Bot receives events from a Listener, dispatches events to handlers, and sends
 // responses back to a Sender.
 type Bot struct {
-	Listener      Listener
-	Sender        Sender
+	ChatService   ChatService
 	NumGoroutines int
 	// NotFoundHandler will be called when no handlers match an incoming message.
 	NotFoundHandler Handler
@@ -74,91 +96,85 @@ func New() *Bot {
 func (b *Bot) Handle(pattern string, handler Handler) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	// Compile the pattern as a regular expression.
-	re, err := regexp.Compile(fmt.Sprintf("(?is)%s", pattern))
-	if err != nil {
-		panic("botengine: invalid pattern " + pattern)
-	}
 	b.handlers = append(b.handlers, &handlerEntry{
-		matcher: re,
+		matcher: stringMatcher(pattern),
 		handler: handler,
 	})
 }
 
-func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Request)) {
+func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Message)) {
 	b.Handle(pattern, HandlerFunc(handler))
 }
 
-func (b *Bot) Run() {
-	if b.Listener == nil {
-		panic("botengine: Listener must not be nil")
+func (b *Bot) Run() <-chan error {
+	if b.ChatService == nil {
+		panic("botengine: ChatService must not be nil")
 	}
-	if b.Sender == nil {
-		panic("botengine: Sender must not be nil")
-	}
+
+	outError := make(chan error, 1)
 	for i := 0; i < b.NumGoroutines; i++ {
-		go b.run()
+		b.wg.Add(1)
+		go b.run(outError)
 	}
+	return outError
 }
 
-func (b *Bot) run() {
-	b.wg.Add(1)
+func (b *Bot) run(outError chan error) {
 	defer b.wg.Done()
 
 	for {
 		select {
-		case msg := <-b.Listener.Messages():
-			b.receive(msg)
+		case msg := <-b.ChatService.Messages():
+			b.receive(outError, msg)
 		case <-b.stopped:
 			return
 		}
 	}
 }
 
-func (b *Bot) receive(msg *Message) {
+func (b *Bot) receive(outError chan error, msg *Message) {
 	for _, h := range b.handlers {
 		if h.matcher.MatchString(msg.Body) {
-			b.dispatch(h.handler, msg)
+			b.dispatch(outError, h.handler, msg)
 			return
 		}
 	}
 	if b.NotFoundHandler != nil {
-		b.dispatch(b.NotFoundHandler, msg)
+		b.dispatch(outError, b.NotFoundHandler, msg)
 	}
 }
 
-func (b *Bot) dispatch(handler Handler, msg *Message) {
+func (b *Bot) dispatch(outError chan error, handler Handler, msg *Message) {
 	buf := &bytes.Buffer{}
-
-	req := &Request{
-		Message: msg,
-		Args:    strings.Split(msg.Body, " "),
-	}
 
 	// Call handler.
 	ctx := context.Background()
-	_ = b.Sender.TypingOn(ctx, msg.Sender) // FIXME: Handle error.
-	handler.Handle(buf, req)
-	_ = b.Sender.TypingOff(ctx, msg.Sender) // FIXME: Handle error.
-
+	if err := b.ChatService.TypingOn(ctx, msg.Sender); err != nil {
+		outError <- errors.Wrap(err, "could not send typing on action")
+	}
+	handler.Handle(buf, msg)
+	if err := b.ChatService.TypingOff(ctx, msg.Sender); err != nil {
+		outError <- errors.Wrap(err, "could not send typing off action")
+	}
 	if body := buf.String(); body != "" {
-		b.send(msg.Sender, body)
+		b.send(outError, msg.Sender, body)
 	}
 }
 
-func (b *Bot) send(recipient User, body string) {
+func (b *Bot) send(outError chan error, recipient User, body string) {
 	res := &Response{
 		Recipient: recipient,
 		Body:      body,
 	}
 	ctx := context.Background()
-	_ = b.Sender.Send(ctx, res) // FIXME: Handle error.
+	if err := b.ChatService.Send(ctx, res); err != nil {
+		outError <- errors.Wrap(err, "could not send response")
+	}
 }
 
 func (b *Bot) Stop() {
 	close(b.stopped)
 	b.wg.Wait()
 
-	b.Listener.Close()
-	b.Sender.Close()
+	b.ChatService.Close()
 }

@@ -34,15 +34,13 @@ func main() {
 		logrus.SetFormatter(&logrus.JSONFormatter{})
 	}
 
-	logger := logrus.StandardLogger()
-
-	logger.Info("Starting airbot")
+	logrus.Info("Starting airbot")
 
 	// Get storage client.
 	ctx := context.Background()
 	storage, err := airbot.NewStorageClient(ctx)
 	if err != nil {
-		logger.WithError(err).Panic("Could not create storage client")
+		logrus.WithError(err).Panic("Could not create storage client")
 	}
 	defer storage.Close()
 
@@ -51,14 +49,14 @@ func main() {
 	if err != nil {
 		logrus.WithError(err).Panic("Could not read ciphertext")
 	}
-	logger.Info("Retrieved ciphertext")
+	logrus.Info("Retrieved ciphertext")
 
 	// Decrypt secrets
 	secrets, err := airbot.DecryptSecrets(ctx, projectID, locationID, keyRingID, cryptoKeyID, ciphertext)
 	if err != nil {
 		logrus.WithError(err).Panic("Could not decrypt secrets")
 	}
-	logger.Info("Decrypted secrets")
+	logrus.Info("Decrypted secrets")
 
 	hc := &http.Client{
 		Timeout: 1 * time.Minute,
@@ -69,7 +67,7 @@ func main() {
 		secrets.Messenger.AccessToken,
 		secrets.Messenger.VerifyToken,
 		secrets.Messenger.AppSecret,
-		messenger.WithLogger(logger),
+		messenger.WithLogger(logrus.StandardLogger()),
 		messenger.WithHTTPClient(hc),
 	)
 
@@ -79,24 +77,20 @@ func main() {
 		airtable.WithHTTPClient(hc),
 	)
 
-	listener := messenger.NewListener(messengerClient)
+	chatService := messenger.NewChatService(messengerClient)
 
 	// Create and setup bot.
 	bot := botengine.New()
-	bot.Listener = listener
-	bot.Sender = messenger.NewSender(messengerClient)
-
-	setupBot(bot, airtableClient)
-
-	logger.Info("Starting bot")
+	bot.ChatService = chatService
 
 	// Run bot.
-	bot.Run()
-	defer bot.Stop()
+	logrus.Info("Starting bot")
 
-	setupRoutes(messengerClient, listener)
+	go runBot(bot, airtableClient)
 
-	logger.Info("Starting appengine server")
+	setupRoutes(messengerClient, chatService)
+
+	logrus.Info("Starting appengine server")
 
 	// Run appengine server.
 	appengine.Main()
@@ -106,10 +100,20 @@ func setupRoutes(client *messenger.Client, evh messenger.EventHandler) {
 	http.HandleFunc("/webhook", client.WebhookHandler(evh))
 }
 
-func setupBot(bot *botengine.Bot, client *airtable.Client) {
+func runBot(bot *botengine.Bot, client *airtable.Client) {
 	// Setup shows handlers
 	shows := airbot.NewShowsBase(client)
-	bot.HandleFunc(`^shows today$`, shows.TodayHandler())
-	bot.HandleFunc(`^shows tomorrow$`, shows.TomorrowHandler())
-	bot.HandleFunc(`^shows \w*$`, shows.DayOfWeekHandler())
+	bot.HandleFunc("shows today", shows.TodayHandler())
+	bot.HandleFunc("shows tomorrow", shows.TomorrowHandler())
+
+	// Run bot.
+	errsChan := bot.Run()
+	defer bot.Stop()
+
+	for {
+		select {
+		case err := <-errsChan:
+			logrus.WithError(err).Error("bot error")
+		}
+	}
 }

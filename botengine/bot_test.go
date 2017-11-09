@@ -10,47 +10,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockListener struct {
-	msgChan chan *Message
-}
-
-func newMockListener() *mockListener { return &mockListener{msgChan: make(chan *Message, 1)} }
-
-func (m *mockListener) Messages() <-chan *Message {
-	return m.msgChan
-}
-
-func (m *mockListener) Close() {}
-
-type mockSender struct {
+type mockChatService struct {
+	msgChan  chan *Message
 	sentChan chan *Response
 }
 
-func newMockSender() *mockSender { return &mockSender{sentChan: make(chan *Response, 1)} }
+func newMockChatService() *mockChatService {
+	return &mockChatService{
+		msgChan:  make(chan *Message, 1),
+		sentChan: make(chan *Response, 1),
+	}
+}
 
-func (m *mockSender) TypingOn(_ context.Context, _ User) error { return nil }
+func (m *mockChatService) Messages() <-chan *Message {
+	return m.msgChan
+}
 
-func (m *mockSender) TypingOff(_ context.Context, _ User) error { return nil }
+func (m *mockChatService) TypingOn(_ context.Context, _ User) error { return nil }
 
-func (m *mockSender) Send(_ context.Context, res *Response) error {
+func (m *mockChatService) TypingOff(_ context.Context, _ User) error { return nil }
+
+func (m *mockChatService) Send(_ context.Context, res *Response) error {
 	m.sentChan <- res
 	return nil
 }
 
-func (m *mockSender) Close() {}
+func (m *mockChatService) Close() {}
 
 func Test_Engine(t *testing.T) {
-	listener := newMockListener()
-	sender := newMockSender()
+	chatService := newMockChatService()
 
 	e := New()
-	e.Listener = listener
-	e.Sender = sender
-	e.NotFoundHandler = HandlerFunc(func(w io.Writer, req *Request) {
-		fmt.Fprintf(w, req.Message.Body)
+	e.ChatService = chatService
+	e.NotFoundHandler = HandlerFunc(func(w io.Writer, msg *Message) {
+		fmt.Fprintf(w, msg.Body)
 	})
 
-	e.HandleFunc("ping", func(w io.Writer, _ *Request) {
+	e.HandleFunc("ping", func(w io.Writer, _ *Message) {
 		fmt.Fprintf(w, "pong")
 	})
 	e.Run()
@@ -87,9 +83,9 @@ func Test_Engine(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			listener.msgChan <- test.msg
+			chatService.msgChan <- test.msg
 			select {
-			case res := <-sender.sentChan:
+			case res := <-chatService.sentChan:
 				require.Equal(t, res, test.res)
 			case <-time.After(1 * time.Second):
 				require.Fail(t, "timout")
