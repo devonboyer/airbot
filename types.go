@@ -13,14 +13,9 @@ type Show struct {
 }
 
 type Fields struct {
-	Name           string   `json:"Name"`
-	Notes          string   `json:"Notes"`
-	DayOfWeek      string   `json:"Day of Week"`
-	Genres         []string `json:"Genres"`
-	RunningTime    string   `json:"Running Time"`
-	Status         string   `json:"Status"`
-	Networks       []string `json:"Networks"`
-	PersonalRating string   `json:"Personal Rating"`
+	Name      string `json:"Name"`
+	DayOfWeek string `json:"Day of Week"`
+	Status    string `json:"Status"`
 }
 
 type ShowList struct {
