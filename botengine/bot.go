@@ -1,7 +1,6 @@
 package botengine
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -19,11 +18,29 @@ type Message struct {
 	Body string
 }
 
+type Status int
+
+const (
+	// StatusOk indicates a bot is responsing to a message.
+	StatusOk Status = iota
+	// StatusError indicates an error occured while processing a message.
+	StatusError
+	// StatusNotFound indicates a bot doesn't know how to handle a message.
+	StatusNotFound
+)
+
 type Response struct {
 	// Recipient is the user who should receive the message.
 	Recipient User
 	// Body is the body of the message.
 	Body string
+	// Status is the status of the response.
+	Status Status
+}
+
+type ResponseWriter interface {
+	io.Writer
+	SetStatus(Status)
 }
 
 // User is a user in the chat service.
@@ -33,17 +50,23 @@ type User struct {
 }
 
 type Handler interface {
-	Handle(io.Writer, *Message)
+	Handle(ResponseWriter, *Message)
 }
 
-type HandlerFunc func(io.Writer, *Message)
+type HandlerFunc func(ResponseWriter, *Message)
 
-func (f HandlerFunc) Handle(w io.Writer, msg *Message) {
+func (f HandlerFunc) Handle(w ResponseWriter, msg *Message) {
 	f(w, msg)
 }
 
-func NotFound(w io.Writer, msg *Message) {
+func Error(w ResponseWriter, err error) {
+	fmt.Fprintf(w, err.Error())
+	w.SetStatus(StatusError)
+}
+
+func NotFound(w ResponseWriter, msg *Message) {
 	fmt.Fprintf(w, fmt.Sprintf("I don't understand \"%s\".", msg.Body))
+	w.SetStatus(StatusNotFound)
 }
 
 func NotFoundHandler() Handler { return HandlerFunc(NotFound) }
@@ -110,7 +133,7 @@ func (b *Bot) Handle(pattern string, handler Handler) {
 	})
 }
 
-func (b *Bot) HandleFunc(pattern string, handler func(io.Writer, *Message)) {
+func (b *Bot) HandleFunc(pattern string, handler func(ResponseWriter, *Message)) {
 	b.Handle(pattern, HandlerFunc(handler))
 }
 
@@ -153,26 +176,27 @@ func (b *Bot) receive(outError chan error, msg *Message) {
 }
 
 func (b *Bot) dispatch(outError chan error, handler Handler, msg *Message) {
-	buf := &bytes.Buffer{}
+	rr := NewRecorder()
 
 	// Call handler.
 	ctx := context.Background()
 	if err := b.ChatService.TypingOn(ctx, msg.Sender); err != nil {
 		outError <- errors.Wrap(err, "could not send typing on action")
 	}
-	handler.Handle(buf, msg)
+	handler.Handle(rr, msg)
 	if err := b.ChatService.TypingOff(ctx, msg.Sender); err != nil {
 		outError <- errors.Wrap(err, "could not send typing off action")
 	}
-	if body := buf.String(); body != "" {
-		b.send(outError, msg.Sender, body)
+	if body := rr.Body.String(); body != "" {
+		b.send(outError, msg.Sender, body, rr.Status)
 	}
 }
 
-func (b *Bot) send(outError chan error, recipient User, body string) {
+func (b *Bot) send(outError chan error, recipient User, body string, status Status) {
 	res := &Response{
 		Recipient: recipient,
 		Body:      body,
+		Status:    status,
 	}
 	ctx := context.Background()
 	if err := b.ChatService.Send(ctx, res); err != nil {

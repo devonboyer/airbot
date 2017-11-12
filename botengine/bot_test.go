@@ -3,7 +3,6 @@ package botengine
 import (
 	"context"
 	"fmt"
-	"io"
 	"testing"
 	"time"
 
@@ -42,11 +41,12 @@ func Test_Engine(t *testing.T) {
 
 	e := New()
 	e.ChatService = chatService
-	e.NotFoundHandler = HandlerFunc(func(w io.Writer, msg *Message) {
+	e.NotFoundHandler = HandlerFunc(func(w ResponseWriter, msg *Message) {
 		fmt.Fprintf(w, msg.Body)
+		w.SetStatus(StatusNotFound)
 	})
 
-	e.HandleFunc("ping", func(w io.Writer, _ *Message) {
+	e.HandleFunc("ping", func(w ResponseWriter, _ *Message) {
 		fmt.Fprintf(w, "pong")
 	})
 	e.Run()
@@ -66,6 +66,7 @@ func Test_Engine(t *testing.T) {
 			&Response{
 				Recipient: User{ID: "1"},
 				Body:      "pong",
+				Status:    StatusOk,
 			},
 		},
 		{
@@ -77,6 +78,7 @@ func Test_Engine(t *testing.T) {
 			&Response{
 				Recipient: User{ID: "1"},
 				Body:      "foo",
+				Status:    StatusNotFound,
 			},
 		},
 	}

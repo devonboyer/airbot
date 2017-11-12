@@ -1,7 +1,6 @@
 package airbot
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/devonboyer/airbot/airtable"
@@ -29,9 +28,10 @@ func Test_ShowsBase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			tt.handler.Handle(buf, nil)
-			require.NotEmpty(t, buf.String())
+			rr := botengine.NewRecorder()
+			tt.handler.Handle(rr, nil)
+			require.NotEmpty(t, botengine.StatusOk, rr.Status)
+			require.NotEmpty(t, rr.Body.String())
 		})
 	}
 }
