@@ -88,10 +88,10 @@ type ChatService interface {
 type Bot struct {
 	ChatService ChatService
 	Router      Router
-	// NumGoroutines is the number of workers that can respond to incoming messages.
+	// NumGoroutines is the number of goroutines that can respond to incoming messages.
 	// Default is 1.
 	NumGoroutines int
-	// NotFoundHandler will be called when no handlers match an incoming message.
+	// NotFoundHandler will be called when the Router cannot match an incoming message.
 	NotFoundHandler Handler
 
 	stopped chan struct{}
