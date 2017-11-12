@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -23,7 +22,7 @@ type Status int
 const (
 	// StatusOk indicates a bot is responsing to a message.
 	StatusOk Status = iota
-	// StatusError indicates an error occured while processing a message.
+	// StatusError indicates a bot is responding with an error message.
 	StatusError
 	// StatusNotFound indicates a bot doesn't know how to handle a message.
 	StatusNotFound
@@ -84,57 +83,29 @@ type ChatService interface {
 	Close()
 }
 
-type matcher interface {
-	MatchString(string) bool
-}
-
-type stringMatcher string
-
-func (m stringMatcher) MatchString(s string) bool {
-	return strings.ToLower(s) == string(m)
-}
-
-type handlerEntry struct {
-	matcher matcher
-	handler Handler
-}
-
-// Bot receives events from a Listener, dispatches events to handlers, and sends
-// responses back to a Sender.
+// Bot receives events from a ChatService, dispatches events to handlers via a Router, and sends
+// responses back to the ChatService.
 type Bot struct {
-	ChatService   ChatService
+	ChatService ChatService
+	Router      Router
+	// NumGoroutines is the number of workers that can respond to incoming messages.
+	// Default is 1.
 	NumGoroutines int
 	// NotFoundHandler will be called when no handlers match an incoming message.
 	NotFoundHandler Handler
 
-	mu       sync.Mutex
-	handlers []*handlerEntry
-	stopped  chan struct{}
-	wg       sync.WaitGroup
+	stopped chan struct{}
+	wg      sync.WaitGroup
 }
 
 func New() *Bot {
 	return &Bot{
+		Router:          DefaultRouter,
 		NumGoroutines:   1,
 		NotFoundHandler: NotFoundHandler(),
-		mu:              sync.Mutex{},
-		handlers:        make([]*handlerEntry, 0),
 		stopped:         make(chan struct{}),
 		wg:              sync.WaitGroup{},
 	}
-}
-
-func (b *Bot) Handle(pattern string, handler Handler) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.handlers = append(b.handlers, &handlerEntry{
-		matcher: stringMatcher(pattern),
-		handler: handler,
-	})
-}
-
-func (b *Bot) HandleFunc(pattern string, handler func(ResponseWriter, *Message)) {
-	b.Handle(pattern, HandlerFunc(handler))
 }
 
 func (b *Bot) Run() <-chan error {
@@ -164,13 +135,10 @@ func (b *Bot) run(outError chan error) {
 }
 
 func (b *Bot) receive(outError chan error, msg *Message) {
-	for _, h := range b.handlers {
-		if h.matcher.MatchString(msg.Body) {
-			b.dispatch(outError, h.handler, msg)
-			return
-		}
-	}
-	if b.NotFoundHandler != nil {
+	handler := b.Router.Match(msg)
+	if handler != nil {
+		b.dispatch(outError, handler, msg)
+	} else if b.NotFoundHandler != nil {
 		b.dispatch(outError, b.NotFoundHandler, msg)
 	}
 }

@@ -52,10 +52,6 @@ func setAcceptHeader(headers http.Header) {
 	headers.Set("Accept", fmt.Sprintf("application/vnd.wit.%s+json", apiVersion))
 }
 
-func setContentType(headers http.Header, value string) {
-	headers.Set("Content-Type", value)
-}
-
 type Error struct {
 	Message    string
 	Code       interface{}
@@ -64,8 +60,10 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	if e.Message != "" {
+	if e.Message != "" && e.Code != nil {
 		return fmt.Sprintf("%v (%d): %s", e.Code, e.StatusCode, e.Message)
+	} else if e.Message != "" {
+		return fmt.Sprintf("Unknown (%d): %s", e.StatusCode, e.Message)
 	}
 	return fmt.Sprintf("Unknown (%d): %s", e.StatusCode, e.Body)
 }

@@ -103,8 +103,8 @@ func setupRoutes(client *messenger.Client, evh messenger.EventHandler) {
 func runBot(bot *botengine.Bot, client *airtable.Client) {
 	// Setup shows handlers
 	shows := airbot.NewShowsBase(client)
-	bot.HandleFunc("shows today", shows.TodayHandler())
-	bot.HandleFunc("shows tomorrow", shows.TomorrowHandler())
+	botengine.HandleFunc("shows today", shows.TodayHandler())
+	botengine.HandleFunc("shows tomorrow", shows.TomorrowHandler())
 
 	// Run bot.
 	errsChan := bot.Run()
