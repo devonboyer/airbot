@@ -1,4 +1,4 @@
-package airtable
+package witai
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-const majorAPIVersion = "0"
+const apiVersion = "20170307"
 
 type ClientOption interface {
 	Apply(*Client)
@@ -24,19 +24,19 @@ func (w withHTTPClient) Apply(c *Client) {
 }
 
 type Client struct {
-	apiKey   string
-	basePath string
-	hc       *http.Client
+	accessToken string
+	hc          *http.Client
+	basePath    string
 }
 
-func New(apiKey string, opts ...ClientOption) *Client {
+func New(accessToken string, opts ...ClientOption) *Client {
 	o := []ClientOption{
 		WithHTTPClient(http.DefaultClient),
 	}
 	opts = append(o, opts...)
 	client := &Client{
-		apiKey:   apiKey,
-		basePath: fmt.Sprintf("https://api.airtable.com/v%s", majorAPIVersion),
+		accessToken: accessToken,
+		basePath:    "https://api.wit.ai",
 	}
 	for _, opt := range opts {
 		opt.Apply(client)
@@ -44,32 +44,33 @@ func New(apiKey string, opts ...ClientOption) *Client {
 	return client
 }
 
-var xVersionHeader = fmt.Sprintf("%s.1.0", majorAPIVersion)
-
-func setVersionHeader(headers http.Header) {
-	headers.Set("x-api-version", xVersionHeader)
-}
-
 func setAuthorizationHeader(headers http.Header, token string) {
 	headers.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 }
 
+func setAcceptHeader(headers http.Header) {
+	headers.Set("Accept", fmt.Sprintf("application/vnd.wit.%s+json", apiVersion))
+}
+
 type Error struct {
-	Type       string `json:"type"`
-	Message    string `json:"message"`
+	Message    string
+	Code       interface{}
 	StatusCode int
 	Body       string
 }
 
 func (e *Error) Error() string {
-	if e.Message != "" {
-		return fmt.Sprintf("%s (%d): %s", e.Type, e.StatusCode, e.Message)
+	if e.Message != "" && e.Code != nil {
+		return fmt.Sprintf("%v (%d): %s", e.Code, e.StatusCode, e.Message)
+	} else if e.Message != "" {
+		return fmt.Sprintf("Unknown (%d): %s", e.StatusCode, e.Message)
 	}
 	return fmt.Sprintf("Unknown (%d): %s", e.StatusCode, e.Body)
 }
 
 type errorReply struct {
-	Error *Error `json:"error"`
+	Error string      `json:"error"`
+	Code  interface{} `json:"code"`
 }
 
 func checkResponse(res *http.Response) error {
@@ -77,19 +78,17 @@ func checkResponse(res *http.Response) error {
 		return nil
 	}
 	slurp, err := ioutil.ReadAll(res.Body)
-	if err == nil {
-		jerr := new(errorReply)
-		err = json.Unmarshal(slurp, jerr)
-		if err == nil && jerr.Error != nil {
-			if jerr.Error.StatusCode == 0 {
-				jerr.Error.StatusCode = res.StatusCode
-			}
-			jerr.Error.Body = string(slurp)
-			return jerr.Error
-		}
-	}
-	return &Error{
+	outErr := &Error{
 		StatusCode: res.StatusCode,
 		Body:       string(slurp),
 	}
+	if err == nil {
+		jerr := new(errorReply)
+		if json.Unmarshal(slurp, jerr); err == nil {
+			outErr.Message = jerr.Error
+			outErr.Code = jerr.Code
+			return outErr
+		}
+	}
+	return outErr
 }

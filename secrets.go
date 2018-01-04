@@ -22,6 +22,9 @@ type Secrets struct {
 		VerifyToken string `json:"verify_token"`
 		AppSecret   string `json:"app_secret"`
 	} `json:"messenger"`
+	Witai struct {
+		ServerAccessToken string `json:"server_access_token"`
+	} `json:"witai"`
 }
 
 func DecryptSecrets(ctx context.Context, projectID, locationID, keyRingID, cryptoKeyID string, ciphertext []byte) (*Secrets, error) {

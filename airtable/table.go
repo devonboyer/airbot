@@ -99,7 +99,7 @@ func (c *TableListCall) doRequest(ctx context.Context) (*http.Response, error) {
 		url += "?" + c.urlParams.Encode()
 	}
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.client.apiKey))
+	setAuthorizationHeader(req.Header, c.client.apiKey)
 	req.Header.Set("x-airtable-application-id", c.baseID)
 	setVersionHeader(req.Header)
 	if ctx == nil {

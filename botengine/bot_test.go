@@ -36,21 +36,21 @@ func (m *mockChatService) Send(_ context.Context, res *Response) error {
 
 func (m *mockChatService) Close() {}
 
-func Test_Engine(t *testing.T) {
+func Test_Bot(t *testing.T) {
 	chatService := newMockChatService()
 
-	e := New()
-	e.ChatService = chatService
-	e.NotFoundHandler = HandlerFunc(func(w ResponseWriter, msg *Message) {
+	bot := New()
+	bot.ChatService = chatService
+	bot.NotFoundHandler = HandlerFunc(func(w ResponseWriter, msg *Message) {
 		fmt.Fprintf(w, msg.Body)
 		w.SetStatus(StatusNotFound)
 	})
 
-	e.HandleFunc("ping", func(w ResponseWriter, _ *Message) {
+	HandleFunc("ping", func(w ResponseWriter, _ *Message) {
 		fmt.Fprintf(w, "pong")
 	})
-	e.Run()
-	defer e.Stop()
+	bot.Run()
+	defer bot.Stop()
 
 	tests := []struct {
 		name string
