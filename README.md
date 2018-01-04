@@ -1,7 +1,5 @@
 # airbot
 
-![alt text](banner.png "Logo Title Text 1")
-
 Browse Airtable bases with a Facebook Messenger bot.
 
 ## Setup
