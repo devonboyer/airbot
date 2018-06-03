@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-APP_DIR="$HOME/src/github.com/devonboyer/airbot/app"
+APP_DIR="$HOME/src/github.com/devonboyer/airbot/cmd/airbot"
 GCLOUD_ACCOUNT="hello@devonboyer.com"
 PROJECT_ID="rising-artifact-182801" # Playground
 VERSION=$(git rev-parse --short HEAD)

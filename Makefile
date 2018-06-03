@@ -9,7 +9,7 @@ bin:
 	mkdir -p bin
 
 build: bin
-	go build ${LDFLAGS} -o bin/airbot .
+	go build ${LDFLAGS} -o bin/airbot ./cmd/airbot
 
 clean:
 	rm -rf bin
@@ -22,7 +22,7 @@ run: build
 	KMS_CRYPTOKEY_ID=secrets \
 	STORAGE_BUCKET_NAME=storage-rising-artifact-182801 \
 	GOOGLE_APPLICATION_CREDENTIALS=config/service-account.json \
-	go run ${LDFLAGS} app/main.go -v
+	go run ${LDFLAGS} cmd/airbot/main.go
 
 test:
 	go test ./...
