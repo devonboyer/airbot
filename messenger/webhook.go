@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/golang/glog"
 )
 
 // EventHandler responds to a webhook event.
@@ -21,7 +23,7 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "GET":
-			c.logger.Printf("messenger: received webhook verification request")
+			glog.Info("Received webhook verification request")
 
 			// Handle verification request.
 			if req.FormValue("hub.verify_token") == c.verifyToken {
@@ -38,23 +40,23 @@ func (c *Client) WebhookHandler(evh EventHandler) http.HandlerFunc {
 			// Read body
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
-				c.logger.Printf("messenger: could not ready body")
+				glog.Error("Could not ready body")
 				handleError(w, http.StatusInternalServerError)
 				return
 			}
 
-			c.logger.Printf("messenger: received webhook event, %v", string(body))
+			glog.Infof("Received webhook event, %v", string(body))
 
 			// Verify event signature.
 			if !c.skipVerify && !verifySignature(c.appSecret, body, req.Header.Get("X-Hub-Signature")[5:]) {
-				c.logger.Printf("messenger: invalid request signature")
+				glog.Error("Invalid request signature")
 				handleError(w, http.StatusUnauthorized)
 				return
 			}
 
 			var ev = &Event{}
 			if err := json.Unmarshal(body, ev); err != nil {
-				c.logger.Printf("messenger: could not unmarshal event, %v", err)
+				glog.Errorf("Could not unmarshal event, %v", err)
 				handleError(w, http.StatusInternalServerError)
 				return
 			}

@@ -6,17 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"golang.org/x/net/context/ctxhttp"
 )
 
 const apiVersion = "2.8"
-
-type logger interface {
-	Printf(string, ...interface{})
-}
 
 type ClientOption interface {
 	Apply(*Client)
@@ -32,17 +27,16 @@ func (w withHTTPClient) Apply(c *Client) {
 	c.hc = w.client
 }
 
-func WithLogger(logger logger) ClientOption {
-	return withLogger{logger}
+type Interface interface {
+	SendByID(recipientID string) SendInterface
 }
 
-type withLogger struct{ logger logger }
-
-func (w withLogger) Apply(c *Client) {
-	c.logger = w.logger
+type SendInterface interface {
+	Action() *SenderActionCall
+	Message() *SenderActionCall
 }
 
-var nopLogger = log.New(ioutil.Discard, "", 0)
+// There is a client and a server component...maybe separate?
 
 type Client struct {
 	accessToken string
@@ -50,14 +44,12 @@ type Client struct {
 	appSecret   string
 	basePath    string
 	hc          *http.Client
-	logger      logger
 	skipVerify  bool
 }
 
 func New(accessToken, verifyToken, appSecret string, opts ...ClientOption) *Client {
 	o := []ClientOption{
 		WithHTTPClient(http.DefaultClient),
-		WithLogger(nopLogger),
 	}
 	opts = append(o, opts...)
 	client := &Client{

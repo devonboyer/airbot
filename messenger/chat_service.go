@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/devonboyer/airbot/botengine"
+	"github.com/golang/glog"
 )
 
 const msgBufferSize = 1024
@@ -31,12 +32,12 @@ func (c *ChatService) HandleEvent(ev *Event) {
 	for _, entry := range ev.Entries {
 		callback := entry.Messaging[0]
 		if callback.Message != nil {
-			c.client.logger.Printf("messenger: Received message (psid: %s, text: %s)", callback.Sender.ID, callback.Message.Text)
+			glog.Infof("Received message (psid: %s, text: %s)", callback.Sender.ID, callback.Message.Text)
 
 			// Mark message as seen.
 			ctx := context.Background()
 			if err := c.client.SendByID(callback.Sender.ID).Action(MarkSeen).Do(ctx); err != nil {
-				c.client.logger.Printf("messenger: Failed to mark seen, %s", err)
+				glog.Errorf("Failed to mark seen, %s", err)
 			}
 
 			c.msgChan <- &botengine.Message{
@@ -68,10 +69,10 @@ func (c *ChatService) Send(ctx context.Context, res *botengine.Response) error {
 		Text(res.Body).
 		Do(ctx)
 	if err != nil {
-		c.client.logger.Printf("messenger: Failed to send message (psid: %s, text: %s), %s", res.Recipient.ID, res.Body, err)
+		glog.Infof("Failed to send message (psid: %s, text: %s), %s", res.Recipient.ID, res.Body, err)
 		return err
 	}
-	c.client.logger.Printf("messenger: Sent message (psid: %s, text: %s)", res.Recipient.ID, res.Body)
+	glog.Infof("Sent message (psid: %s, text: %s)", res.Recipient.ID, res.Body)
 	return nil
 }
 
