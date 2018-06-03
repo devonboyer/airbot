@@ -117,10 +117,8 @@ func New() *Bot {
 	return &Bot{
 		NumGoroutines:   1,
 		NotFoundHandler: NotFoundHandler(),
-		mu:              sync.Mutex{},
 		handlers:        make([]*handlerEntry, 0),
 		stopped:         make(chan struct{}),
-		wg:              sync.WaitGroup{},
 	}
 }
 

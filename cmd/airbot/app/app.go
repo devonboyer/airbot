@@ -10,8 +10,9 @@ import (
 
 	"github.com/devonboyer/airbot"
 	"github.com/devonboyer/airbot/airtable"
+	"github.com/devonboyer/airbot/apis/shows"
+	"github.com/devonboyer/airbot/apis/webhook"
 	"github.com/devonboyer/airbot/botengine"
-	"github.com/devonboyer/airbot/messenger"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/appengine"
@@ -64,24 +65,14 @@ func NewAirbotCommand() *cobra.Command {
 			}
 			log.Info("Decrypted secrets")
 
-			hc := &http.Client{Timeout: 30 * time.Second}
-
-			// Get messenger client
-			messengerClient := messenger.New(
-				secrets.Messenger.AccessToken,
-				secrets.Messenger.VerifyToken,
-				secrets.Messenger.AppSecret,
-				messenger.WithLogger(log.StandardLogger()),
-				messenger.WithHTTPClient(hc),
-			)
-
 			// Get airtable client
 			airtableClient := airtable.New(
 				secrets.Airtable.APIKey,
-				airtable.WithHTTPClient(hc),
+				airtable.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
 			)
 
-			chatService := messenger.NewChatService(messengerClient)
+			svc := airbot.NewMessengerService(secrets.Messenger.AccessToken)
+			svc.Run()
 
 			signalCh := make(chan os.Signal, 1)
 			signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
@@ -98,40 +89,28 @@ func NewAirbotCommand() *cobra.Command {
 
 			// Create and setup bot.
 			bot := botengine.New()
-			bot.ChatService = chatService
+			bot.ChatService = svc
 
-			// Run bot.
-			go runBot(stopCh, bot, airtableClient)
+			// Install apis
+			shows.Install(bot, airtableClient)
+			webhook.Install(secrets.Messenger.AppSecret, secrets.Messenger.VerifyToken, svc.Events())
 
-			setupRoutes(messengerClient, chatService)
+			log.Info("Starting bot")
+			go runBot(stopCh, bot)
 
 			log.Info("Starting appengine server")
-
-			// Run appengine server.
 			appengine.Main()
 		},
 	}
 }
 
-func setupRoutes(client *messenger.Client, evh messenger.EventHandler) {
-	http.HandleFunc("/webhook", client.WebhookHandler(evh))
-}
-
-func runBot(stopCh chan struct{}, bot *botengine.Bot, client *airtable.Client) {
-	// Setup shows handlers
-	shows := airbot.NewShowsBase(client)
-	bot.HandleFunc("shows today", shows.TodayHandler())
-	bot.HandleFunc("shows tomorrow", shows.TomorrowHandler())
-
-	log.Info("Starting bot")
-
-	// Run bot.
-	errsChan := bot.Run()
+func runBot(stopCh chan struct{}, bot *botengine.Bot) {
+	errsCh := bot.Run()
 	defer bot.Stop()
 
 	for {
 		select {
-		case err := <-errsChan:
+		case err := <-errsCh:
 			log.WithError(err).Error("bot error")
 		case <-stopCh:
 			log.Info("Shutting down")

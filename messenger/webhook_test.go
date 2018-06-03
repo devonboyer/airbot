@@ -5,17 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-type nopEventHandler struct{}
-
-func (n nopEventHandler) HandleEvent(_ *Event) {}
-
 func Test_WebhookHandler(t *testing.T) {
-	client := &Client{logger: nopLogger, skipVerify: true}
-
 	tests := []struct {
 		name, jsonResponse string
 	}{
@@ -25,20 +20,28 @@ func Test_WebhookHandler(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			buf.WriteString(test.jsonResponse)
+			buf.WriteString(tt.jsonResponse)
 
 			req, err := http.NewRequest("POST", "/webhook", buf)
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
 
-			handler := http.HandlerFunc(client.WebhookHandler(nopEventHandler{}))
+			eventsCh := make(chan *Event, 1)
+
+			handler := WebhookHandler{skipVerifySignature: true, eventsCh: eventsCh}
 			handler.ServeHTTP(rr, req)
 
-			require.Equal(t, http.StatusOK, rr.Code)
+			timeout := time.NewTimer(1 * time.Second)
+			select {
+			case <-eventsCh:
+				require.Equal(t, http.StatusOK, rr.Code)
+			case <-timeout.C:
+				require.FailNow(t, "Timeout waiting for event")
+			}
 		})
 	}
 }

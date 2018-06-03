@@ -40,22 +40,18 @@ type SendInterface interface {
 
 type Client struct {
 	accessToken string
-	verifyToken string
-	appSecret   string
 	basePath    string
 	hc          *http.Client
 	skipVerify  bool
 }
 
-func New(accessToken, verifyToken, appSecret string, opts ...ClientOption) *Client {
+func New(accessToken string, opts ...ClientOption) *Client {
 	o := []ClientOption{
 		WithHTTPClient(http.DefaultClient),
 	}
 	opts = append(o, opts...)
 	client := &Client{
 		accessToken: accessToken,
-		verifyToken: verifyToken,
-		appSecret:   appSecret,
 		basePath:    fmt.Sprintf("https://graph.facebook.com/v%s/me", apiVersion),
 	}
 	for _, opt := range opts {
