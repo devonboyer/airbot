@@ -27,22 +27,10 @@ func (w withHTTPClient) Apply(c *Client) {
 	c.hc = w.client
 }
 
-type Interface interface {
-	SendByID(recipientID string) SendInterface
-}
-
-type SendInterface interface {
-	Action() *SenderActionCall
-	Message() *SenderActionCall
-}
-
-// There is a client and a server component...maybe separate?
-
 type Client struct {
 	accessToken string
 	basePath    string
 	hc          *http.Client
-	skipVerify  bool
 }
 
 func New(accessToken string, opts ...ClientOption) *Client {
