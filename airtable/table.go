@@ -11,78 +11,14 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
-type SortField struct {
-	Field string
-	Desc  bool
-}
-
-type TableHandle struct {
+type TableClient struct {
 	client  *Client
 	baseID  string
 	tableID string
 }
 
-func (t *TableHandle) List() *TableListCall {
-	return newTableListCall(t.client, t.baseID, t.tableID)
-}
-
-type TableListCall struct {
-	client    *Client
-	baseID    string
-	tableID   string
-	urlParams url.Values
-}
-
-func newTableListCall(client *Client, baseID, tableID string) *TableListCall {
-	return &TableListCall{
-		client:    client,
-		baseID:    baseID,
-		tableID:   tableID,
-		urlParams: make(url.Values),
-	}
-}
-
-func (c *TableListCall) Fields(fields []string) *TableListCall {
-	for _, field := range fields {
-		c.urlParams.Add("fields[]", field)
-	}
-	return c
-}
-
-func (c *TableListCall) FilterByFormula(formula string) *TableListCall {
-	c.urlParams.Set("filterByFormula", formula)
-	return c
-}
-
-func (c *TableListCall) MaxRecords(maxRecords int) *TableListCall {
-	c.urlParams.Set("maxRecords", strconv.Itoa(maxRecords))
-	return c
-}
-
-func (c *TableListCall) PageSize(pageSize int) *TableListCall {
-	c.urlParams.Set("pageSize", strconv.Itoa(pageSize))
-	return c
-}
-
-func (c *TableListCall) SortFields(sortFields []SortField) *TableListCall {
-	for i, sort := range sortFields {
-		c.urlParams.Add(fmt.Sprintf("sort[%d][field]", i), sort.Field)
-		direction := "asc"
-		if sort.Desc {
-			direction = "desc"
-		}
-		c.urlParams.Add(fmt.Sprintf("sort[%d][direction]", i), direction)
-	}
-	return c
-}
-
-func (c *TableListCall) View(view string) *TableListCall {
-	c.urlParams.Set("view", view)
-	return c
-}
-
-func (c *TableListCall) Do(ctx context.Context, v interface{}) error {
-	res, err := c.doRequest(ctx)
+func (c *TableClient) List(ctx context.Context, opts *ListOptions, v interface{}) error {
+	res, err := c.doRequest(ctx, opts.urlParams())
 	if err != nil {
 		return err
 	}
@@ -93,10 +29,10 @@ func (c *TableListCall) Do(ctx context.Context, v interface{}) error {
 	return json.NewDecoder(res.Body).Decode(v)
 }
 
-func (c *TableListCall) doRequest(ctx context.Context) (*http.Response, error) {
+func (c *TableClient) doRequest(ctx context.Context, urlParams url.Values) (*http.Response, error) {
 	url := fmt.Sprintf("%s/%s/%s", c.client.basePath, c.baseID, c.tableID)
-	if len(c.urlParams) > 0 {
-		url += "?" + c.urlParams.Encode()
+	if len(urlParams) > 0 {
+		url += "?" + urlParams.Encode()
 	}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.client.apiKey))
@@ -106,4 +42,46 @@ func (c *TableListCall) doRequest(ctx context.Context) (*http.Response, error) {
 		return c.client.hc.Do(req)
 	}
 	return ctxhttp.Do(ctx, c.client.hc, req)
+}
+
+type ListOptions struct {
+	Fields          []string
+	SortFields      []SortField
+	FilterByFormula string
+	MaxRecords      int
+	PageSize        int
+	View            string
+}
+
+type SortField struct {
+	Field string
+	Desc  bool
+}
+
+func (o *ListOptions) urlParams() url.Values {
+	urlParams := make(url.Values)
+	for _, field := range o.Fields {
+		urlParams.Add("fields[]", field)
+	}
+	for i, sort := range o.SortFields {
+		urlParams.Add(fmt.Sprintf("sort[%d][field]", i), sort.Field)
+		direction := "asc"
+		if sort.Desc {
+			direction = "desc"
+		}
+		urlParams.Add(fmt.Sprintf("sort[%d][direction]", i), direction)
+	}
+	if o.FilterByFormula != "" {
+		urlParams.Set("filterByFormula", o.FilterByFormula)
+	}
+	if o.MaxRecords != 0 {
+		urlParams.Set("maxRecords", strconv.Itoa(o.MaxRecords))
+	}
+	if o.PageSize != 0 {
+		urlParams.Set("pageSize", strconv.Itoa(o.PageSize))
+	}
+	if o.View != "" {
+		urlParams.Set("view", o.View)
+	}
+	return urlParams
 }

@@ -1,21 +1,21 @@
 package airtable
 
-type BaseHandle struct {
+type BaseClient struct {
 	client *Client
 	baseID string
 }
 
-func (c *Client) Base(baseID string) *BaseHandle {
-	return &BaseHandle{
+func (c *Client) Base(baseID string) *BaseClient {
+	return &BaseClient{
 		client: c,
 		baseID: baseID,
 	}
 }
 
-func (b *BaseHandle) Table(name string) *TableHandle {
-	return &TableHandle{
-		client:  b.client,
-		baseID:  b.baseID,
+func (c *BaseClient) Table(name string) *TableClient {
+	return &TableClient{
+		client:  c.client,
+		baseID:  c.baseID,
 		tableID: name,
 	}
 }

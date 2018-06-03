@@ -18,12 +18,12 @@ const (
 
 // ShowsBase provides bot handlers for retrieving data from the Shows airtable base.
 type ShowsBase struct {
-	*airtable.BaseScopedClient
+	airtable.TableInterface
 }
 
 func NewShowsBase(client *airtable.Client) *ShowsBase {
 	return &ShowsBase{
-		client.WithBaseScope(showsBaseID),
+		client.Base(showsBaseID).Table(showsTableID),
 	}
 }
 
@@ -59,11 +59,8 @@ func (b *ShowsBase) TomorrowHandler() func(botengine.ResponseWriter, *botengine.
 
 func (b *ShowsBase) GetShows(ctx context.Context, day string) (*ShowList, error) {
 	shows := &ShowList{}
-	err := b.
-		Table(showsTableID).
-		List().
-		FilterByFormula(fmt.Sprintf(showsFormulaFmt, day)).
-		Do(ctx, shows)
+	opts := &airtable.ListOptions{FilterByFormula: fmt.Sprintf(showsFormulaFmt, day)}
+	err := b.List(ctx, opts, shows)
 	if err != nil {
 		return nil, err
 	}
