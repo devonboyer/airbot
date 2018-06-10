@@ -11,22 +11,22 @@ import (
 	"github.com/golang/glog"
 )
 
-type WebhookHandler struct {
+type webhookHandler struct {
 	appSecret           string
 	verifyToken         string
 	skipVerifySignature bool
 	eventsCh            chan<- *Event
 }
 
-func NewWebhookHandler(appSecret, verifyToken string, eventsCh chan<- *Event) *WebhookHandler {
-	return &WebhookHandler{
+func NewWebhookHandler(appSecret, verifyToken string, eventsCh chan<- *Event) http.Handler {
+	return &webhookHandler{
 		appSecret:   appSecret,
 		verifyToken: verifyToken,
 		eventsCh:    eventsCh,
 	}
 }
 
-func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
 		glog.Info("Received webhook verification request")
@@ -78,10 +78,6 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	default:
 		handleError(w, http.StatusMethodNotAllowed)
 	}
-}
-
-func (h *WebhookHandler) Events() chan<- *Event {
-	return h.eventsCh
 }
 
 // https://developers.facebook.com/docs/messenger-platform/webhook#security

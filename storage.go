@@ -5,21 +5,19 @@ import (
 	"context"
 	"io"
 
-	"cloud.google.com/go/storage"
+	gcs "cloud.google.com/go/storage"
 )
 
 type StorageClient struct {
-	client *storage.Client
+	client *gcs.Client
 }
 
 func NewStorageClient(ctx context.Context) (*StorageClient, error) {
-	client, err := storage.NewClient(ctx)
+	client, err := gcs.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &StorageClient{
-		client: client,
-	}, nil
+	return &StorageClient{client}, nil
 }
 
 func (s *StorageClient) Get(ctx context.Context, bucket, object string) ([]byte, error) {

@@ -32,7 +32,7 @@ func Test_WebhookHandler(t *testing.T) {
 
 			eventsCh := make(chan *Event, 1)
 
-			handler := WebhookHandler{skipVerifySignature: true, eventsCh: eventsCh}
+			handler := webhookHandler{skipVerifySignature: true, eventsCh: eventsCh}
 			handler.ServeHTTP(rr, req)
 
 			timeout := time.NewTimer(1 * time.Second)

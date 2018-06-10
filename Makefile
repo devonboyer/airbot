@@ -1,7 +1,7 @@
-VERSION=$(shell git rev-parse --short HEAD)
+COMMIT=$(shell git rev-parse --short HEAD)
 
 # Setup the -ldflags option for go build here, interpolate the variable values
-LDFLAGS = -ldflags "-X main.version=${VERSION}"
+LDFLAGS = -ldflags "-X version.Commit=${COMMIT}"
 
 all: build
 
@@ -15,12 +15,6 @@ clean:
 	rm -rf bin
 
 run: build
-	ENV=development \
-	PROJECT_ID=rising-artifact-182801 \
-	KMS_LOCATION_ID=global \
-	KMS_KEYRING_ID=airbot \
-	KMS_CRYPTOKEY_ID=secrets \
-	STORAGE_BUCKET_NAME=storage-rising-artifact-182801 \
 	GOOGLE_APPLICATION_CREDENTIALS=config/service-account.json \
 	go run ${LDFLAGS} cmd/airbot/main.go
 

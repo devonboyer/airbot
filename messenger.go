@@ -2,9 +2,7 @@ package airbot
 
 import (
 	"context"
-	"net/http"
 	"sync"
-	"time"
 
 	"github.com/devonboyer/airbot/botengine"
 	"github.com/devonboyer/airbot/messenger"
@@ -26,13 +24,9 @@ type MessengerService struct {
 	wg      sync.WaitGroup
 }
 
-func NewMessengerService(accessToken string) *MessengerService {
-	c := messenger.New(
-		accessToken,
-		messenger.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
-	)
+func NewMessengerService(client *messenger.Client) *MessengerService {
 	return &MessengerService{
-		client:   c,
+		client:   client,
 		msgCh:    make(chan *botengine.Message, msgChannelSize),
 		eventsCh: make(chan *messenger.Event, eventsChannelSize),
 		stopped:  make(chan struct{}),

@@ -5,9 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/devonboyer/airbot/airtable"
+	"github.com/devonboyer/airbot/messenger"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	cloudkms "google.golang.org/api/cloudkms/v1"
@@ -56,6 +59,20 @@ func DecryptSecrets(ctx context.Context, projectID, locationID, keyRingID, crypt
 		return nil, err
 	}
 	return secrets, nil
+}
+
+func (s *Secrets) NewMessengerClient(httpClient *http.Client) *messenger.Client {
+	return messenger.New(
+		s.Messenger.AccessToken,
+		messenger.WithHTTPClient(httpClient),
+	)
+}
+
+func (s *Secrets) NewAirtableClient(httpClient *http.Client) *airtable.Client {
+	return airtable.New(
+		s.Airtable.APIKey,
+		airtable.WithHTTPClient(httpClient),
+	)
 }
 
 func MustReadSecrets(dir string) *Secrets {
